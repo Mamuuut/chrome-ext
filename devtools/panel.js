@@ -12,10 +12,17 @@ oPort.postMessage({
 
 chrome.devtools.panels.elements.onSelectionChanged.addListener(function()
 {
-    chrome.devtools.inspectedWindow.eval("setSelectedElement($0)");
+    chrome.devtools.inspectedWindow.eval('setSelectedElement($0)');
 });
 
+var asFLAG_LOCALE = {
+    'de_DE' : 'de',
+    'en_GB' : 'gb',
+    'es_ES' : 'es',
+    'ru_RU' : 'ru'
+}
 var aoModuleGroup = {};
+var aselLine = {};
 
 oPort.onMessage.addListener(function(oMsg) {
 
@@ -32,16 +39,24 @@ oPort.onMessage.addListener(function(oMsg) {
     // Language Module list
     if (oMsg.selected) {
         oPort.postMessage({
-            'log' : ['selected']
+            'log' : [oMsg.selected]
         });
 
         $('#main').find('.module, .module-content, .line').hide();
-        $('.line').filter(function()
+        _.forIn(aoModuleGroup, function(aoModule, sGroup)
+        {
+            _.forEach(aoModule, function(oModule)
             {
-                return $(this).data('value') == oMsg.selected;
-            }).show()
-            .closest('.module-content').show()
-            .closest('.module').show();
+                _.forIn(oModule.oModule, function(sValue, sKey)
+                {
+                    if (sValue == oMsg.selected) {
+                        aselLine[sKey].show()
+                            .closest('.module-content').show()   
+                            .closest('.module').show();   
+                    }
+                });
+            });
+        });
     }
 
     // Language Module list
@@ -53,6 +68,7 @@ oPort.onMessage.addListener(function(oMsg) {
         aoModuleGroup = _.groupBy(oMsg.aoModule, function(oModule)
         {
             var sLocale = oModule.sModule.match(/.*\/language(\/\w+)\/.*/)[1];
+            oModule.sLocale = asFLAG_LOCALE[sLocale.replace(/\//, '')];
             return oModule.sModule.replace(sLocale, '');
         });
 
@@ -63,6 +79,7 @@ oPort.onMessage.addListener(function(oMsg) {
         _.forIn(aoModuleGroup, function(aoModule, sGroup)
         {
             var elGroup = $('<div class="module off" />');
+
             elGroup.append('<div class="module-title">' + sGroup + '</div>');
             _.forEach(aoModule, function(oModule)
             {
@@ -70,12 +87,16 @@ oPort.onMessage.addListener(function(oMsg) {
                 
                 _.forIn(oModule.oModule, function(sValue, sKey)
                 {
-                    var elLine = $('<dl class="line" data-value="' + sValue + '" />');
-                    
-                    elLine.append('<dt>' + sKey + '</dt>');
-                    elLine.append('<dd>' + sValue + '</dd>');
+                    var elLine = aselLine[sKey];
 
-                    elModule.append(elLine);
+                    if (!elLine) {
+                        elLine = $('<dl class="line" />');
+                        elLine.append('<dt></span>' + sKey + '</dt>');
+                        elModule.append(elLine);
+                        aselLine[sKey] = elLine;
+                    }
+                    
+                    elLine.append('<dd><span class="flag-icon flag-icon-' + oModule.sLocale + '" /><input type="text" value="' + sValue + '"/></dd>');
                 });
 
                 elGroup.append(elModule);
@@ -84,7 +105,7 @@ oPort.onMessage.addListener(function(oMsg) {
             $('#main').append(elGroup);
         });
 
-        $('#main').find('.module').click(function(oEvent)
+        $('#main').find('.module-title').click(function(oEvent)
         {
             oPort.postMessage({
                 'log' : 'click'

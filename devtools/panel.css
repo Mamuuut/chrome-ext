@@ -1,7 +1,10 @@
 .module {
+    width : 100%;
 }
 
 .module-title {
+    position         : relative;
+    width            : 100%;
     padding-left     : 10px;
     line-height      : 20px;
     background-color : #ddd;
@@ -10,28 +13,48 @@
 }
 
 .module-content {
+    position      : relative;
+    width         : 100%;
     border-bottom : 1px solid #ccc;
 }
 .module.off .module-content {
     display: none;
 }
 
+.flag-icon {
+    margin-right : 5px;
+    position     : absolute;
+    top          : 5px;
+    left         : 5px;
+}
+
 dl {
-    margin : 1px 0;
+    position : relative;
+    width    : 100%;
+    margin   : 2px 0;
 }
 
 dl dt {
     background-color : #eee;
     color            : #333;
-    float            : left; 
     font-weight      : bold; 
     margin           : 0;
-    margin-right     : 10px; 
-    padding          : 5px;  
-    width            : 40%; 
+    padding          : 5px;
+    width            : 100%;
 }
  
 dl dd {
-    margin  : 0; 
-    padding : 5px 0;
+    position         : relative;
+    margin           : 0; 
+    width            : 100%;
+    background-color : #e00;
+}
+
+dl dd + dd {
+  border-top : none;
+}
+
+dl dd input {
+    padding : 2px 5px 3px 25px;
+    width   : 100%;
 }
