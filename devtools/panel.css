@@ -1,0 +1,37 @@
+.module {
+}
+
+.module-title {
+    padding-left     : 10px;
+    line-height      : 20px;
+    background-color : #ddd;
+    border-bottom    : 1px solid #ccc;
+    cursor           : pointer;
+}
+
+.module-content {
+    border-bottom : 1px solid #ccc;
+}
+.module.off .module-content {
+    display: none;
+}
+
+dl {
+    margin : 1px 0;
+}
+
+dl dt {
+    background-color : #eee;
+    color            : #333;
+    float            : left; 
+    font-weight      : bold; 
+    margin           : 0;
+    margin-right     : 10px; 
+    padding          : 5px;  
+    width            : 40%; 
+}
+ 
+dl dd {
+    margin  : 0; 
+    padding : 5px 0;
+}
