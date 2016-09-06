@@ -1,20 +1,23 @@
+*, *:before, *:after {
+  box-sizing: border-box;
+}
+
 .module {
-    width : 100%;
 }
 
 .module-title {
-    position         : relative;
-    width            : 100%;
-    padding-left     : 10px;
     line-height      : 20px;
     background-color : #ddd;
-    border-bottom    : 1px solid #ccc;
+    border           : 1px solid #ccc;
     cursor           : pointer;
+    padding-left     : 5px;
+}
+
+.module-title + .module-title {
+    margin-top : -1px;
 }
 
 .module-content {
-    position      : relative;
-    width         : 100%;
     border-bottom : 1px solid #ccc;
 }
 .module.off .module-content {
@@ -22,39 +25,34 @@
 }
 
 .flag-icon {
-    margin-right : 5px;
-    position     : absolute;
-    top          : 5px;
-    left         : 5px;
+    margin   : 5px;
+    position : absolute;
 }
 
 dl {
-    position : relative;
-    width    : 100%;
     margin   : 2px 0;
 }
 
 dl dt {
+    border           : 1px solid #999;
     background-color : #eee;
     color            : #333;
-    font-weight      : bold; 
+    font-weight      : bold;
     margin           : 0;
-    padding          : 5px;
-    width            : 100%;
+    line-height      : 20px;
+    padding-left     : 5px;
 }
- 
+
 dl dd {
     position         : relative;
-    margin           : 0; 
+    margin           : 0;
+    margin-top       : -1px;
     width            : 100%;
     background-color : #e00;
 }
 
-dl dd + dd {
-  border-top : none;
-}
-
 dl dd input {
-    padding : 2px 5px 3px 25px;
-    width   : 100%;
+    padding-left : 25px;
+    width        : 100%;
+    line-height  : 20px;
 }

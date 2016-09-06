@@ -20,7 +20,7 @@ var asFLAG_LOCALE = {
     'en_GB' : 'gb',
     'es_ES' : 'es',
     'ru_RU' : 'ru'
-}
+};
 var aoModuleGroup = {};
 var aselLine = {};
 
@@ -51,8 +51,8 @@ oPort.onMessage.addListener(function(oMsg) {
                 {
                     if (sValue == oMsg.selected) {
                         aselLine[sKey].show()
-                            .closest('.module-content').show()   
-                            .closest('.module').show();   
+                            .closest('.module-content').show()
+                            .closest('.module').show();
                     }
                 });
             });
@@ -84,18 +84,18 @@ oPort.onMessage.addListener(function(oMsg) {
             _.forEach(aoModule, function(oModule)
             {
                 var elModule = $('<div class="module-content"></div>');
-                
+
                 _.forIn(oModule.oModule, function(sValue, sKey)
                 {
                     var elLine = aselLine[sKey];
 
                     if (!elLine) {
                         elLine = $('<dl class="line" />');
-                        elLine.append('<dt></span>' + sKey + '</dt>');
+                        elLine.append('<dt>' + sKey + '</dt>');
                         elModule.append(elLine);
                         aselLine[sKey] = elLine;
                     }
-                    
+
                     elLine.append('<dd><span class="flag-icon flag-icon-' + oModule.sLocale + '" /><input type="text" value="' + sValue + '"/></dd>');
                 });
 
