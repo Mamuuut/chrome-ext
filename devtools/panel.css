@@ -56,3 +56,21 @@ dl dd input {
     width        : 100%;
     line-height  : 20px;
 }
+
+button.upload {
+    outline          : 0 !important;
+    background-color : #999;
+    color            : #fff;
+    border-radius    : 4px;
+    font-weight      : bold;
+    border-width     : 1px;
+    border-style     : solid;
+    border-color     : #777;
+    margin           : 5px 0;
+    padding          : 5px;
+    cursor           : pointer;
+}
+
+button.upload:hover {
+    background-color : #f09000;
+}

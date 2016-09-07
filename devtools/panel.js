@@ -81,9 +81,13 @@ oPort.onMessage.addListener(function(oMsg) {
             var elGroup = $('<div class="module off" />');
 
             elGroup.append('<div class="module-title">' + sGroup + '</div>');
+            var elModule = $('<div class="module-content"></div>')
+                .data('aoModule', aoModule);
+            elModule.append('<div class="module-upload"><button class="upload">Upload to Spreadsheet</button></div>');
+            elGroup.append(elModule);
+            
             _.forEach(aoModule, function(oModule)
             {
-                var elModule = $('<div class="module-content"></div>');
 
                 _.forIn(oModule.oModule, function(sValue, sKey)
                 {
@@ -99,7 +103,6 @@ oPort.onMessage.addListener(function(oMsg) {
                     elLine.append('<dd><span class="flag-icon flag-icon-' + oModule.sLocale + '" /><input type="text" value="' + sValue + '"/></dd>');
                 });
 
-                elGroup.append(elModule);
                 oModule.elModule = elModule;
             });
             $('#main').append(elGroup);
@@ -107,11 +110,33 @@ oPort.onMessage.addListener(function(oMsg) {
 
         $('#main').find('.module-title').click(function(oEvent)
         {
+            $(oEvent.target).closest('.module').toggleClass('off');
+        });
+
+        $('#main').find('.upload').click(function(oEvent)
+        {
+            var aoModule = $(oEvent.target).closest('.module-content').data('aoModule');
+            var asKeys = _.union.apply(_, _.map(_.map(aoModule, 'oModule'), _.keys));
+
             oPort.postMessage({
-                'log' : 'click'
+                'log' : asKeys
             });
 
-            $(oEvent.target).closest('.module').toggleClass('off');
+            var assValues = _.map(asKeys, function(sKey)
+            {
+                return [sKey];
+            });
+            assValues.unshift(['Keys']);
+            _.forEach(aoModule, function(oModule)
+            {
+                assValues[0].push(oModule.sLocale);
+                _.forEach(asKeys, function(sKey, iIndex)
+                {
+                    assValues[iIndex + 1].push(oModule.oModule[sKey] || '');
+                })
+            });
+
+            chrome.devtools.inspectedWindow.eval('vUploadSpreadSheet(' + JSON.stringify(assValues) + ')');
         });
 
         oPort.postMessage({
