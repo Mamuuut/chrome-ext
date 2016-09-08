@@ -6,6 +6,33 @@ $('.clear-filter').click(function(oEvent)
     $('#content').find('.module-content').hide();
 });
 
+$('.search').click(function(oEvent)
+{
+    var sText = $('.search-input').val();
+    if (sText) {
+
+        $('#content').find('.module, .module-content, .line').hide();
+        _.forIn(aoModuleGroup, function(aoModule, sGroup)
+        {
+            _.forEach(aoModule, function(oModule)
+            {
+                _.forIn(oModule.oModule, function(sValue, sKey)
+                {
+                    if (sValue.toLowerCase().search(sText.toLowerCase()) !== -1) {
+                        aselLine[sKey].show()
+                            .closest('.module-content').show()
+                            .closest('.module').show();
+                    }
+                });
+            });
+        });
+    }
+    else {
+        $('#content').find('.module, .line').show();
+        $('#content').find('.module-content').hide();
+    }
+});
+
 // Create a connection to the background page
 var oPort = chrome.runtime.connect({
     'name' : 'dev_panel'
