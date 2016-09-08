@@ -1,4 +1,10 @@
-$('#main').html('Connecting to deZem application…');
+$('#content').html('Connecting to deZem application…');
+
+$('.clear-filter').click(function(oEvent)
+{
+    $('#content').find('.module, .line').show();
+    $('#content').find('.module-content').hide();
+});
 
 // Create a connection to the background page
 var oPort = chrome.runtime.connect({
@@ -28,7 +34,7 @@ oPort.onMessage.addListener(function(oMsg) {
 
     // Init
     if (oMsg.initComplete) {
-        $('#main').html('onMessage init ' + chrome.devtools.inspectedWindow.tabId);
+        $('#content').html('loading module… ');
 
         oPort.postMessage({
             'tabId'          : chrome.devtools.inspectedWindow.tabId,
@@ -42,7 +48,7 @@ oPort.onMessage.addListener(function(oMsg) {
             'log' : [oMsg.selected]
         });
 
-        $('#main').find('.module, .module-content, .line').hide();
+        $('#content').find('.module, .module-content, .line').hide();
         _.forIn(aoModuleGroup, function(aoModule, sGroup)
         {
             _.forEach(aoModule, function(oModule)
@@ -61,7 +67,7 @@ oPort.onMessage.addListener(function(oMsg) {
 
     // Language Module list
     if (oMsg.aoModule) {
-        $('#main').empty();
+        $('#content').empty();
 
         oMsg.aoModule = _.sortBy(oMsg.aoModule, 'sModule');
 
@@ -82,10 +88,11 @@ oPort.onMessage.addListener(function(oMsg) {
 
             elGroup.append('<div class="module-title">' + sGroup + '</div>');
             var elModule = $('<div class="module-content"></div>')
-                .data('aoModule', aoModule);
+                .data('aoModule', aoModule)
+                .hide();
             elModule.append('<div class="module-upload"><button class="upload">Upload to Spreadsheet</button></div>');
             elGroup.append(elModule);
-            
+
             _.forEach(aoModule, function(oModule)
             {
 
@@ -105,15 +112,19 @@ oPort.onMessage.addListener(function(oMsg) {
 
                 oModule.elModule = elModule;
             });
-            $('#main').append(elGroup);
+            $('#content').append(elGroup);
         });
 
-        $('#main').find('.module-title').click(function(oEvent)
+        $('#content').find('.module-title').click(function(oEvent)
         {
-            $(oEvent.target).closest('.module').toggleClass('off');
+
+            oPort.postMessage({
+                'log' : 'CLICK'
+            });
+            $(oEvent.target).closest('.module').find('.module-content').toggle();
         });
 
-        $('#main').find('.upload').click(function(oEvent)
+        $('#content').find('.upload').click(function(oEvent)
         {
             var aoModule = $(oEvent.target).closest('.module-content').data('aoModule');
             var asKeys = _.union.apply(_, _.map(_.map(aoModule, 'oModule'), _.keys));
@@ -132,7 +143,8 @@ oPort.onMessage.addListener(function(oMsg) {
                 assValues[0].push(oModule.sLocale);
                 _.forEach(asKeys, function(sKey, iIndex)
                 {
-                    assValues[iIndex + 1].push(oModule.oModule[sKey] || '');
+                    var sValue = typeof oModule.oModule[sKey] === 'string' ? oModule.oModule[sKey] : '';
+                    assValues[iIndex + 1].push(sValue);
                 })
             });
 
@@ -146,12 +158,12 @@ oPort.onMessage.addListener(function(oMsg) {
 
     // Fixtures
     if (oMsg.asFixture) {
-        $('#main').empty();
+        $('#content').empty();
         oMsg.asFixture.forEach(function(sFixture)
         {
             var oFixture = JSON.parse(sFixture);
-            // $('#main').append('<div>' + oFixture.oRequest.method + '</div>');
-            // window.document.getElementById('main').innerHTML = '<pre>' + oMsg.asFixture + '</pre>';
+            // $('#content').append('<div>' + oFixture.oRequest.method + '</div>');
+            // window.document.getElementById('content').innerHTML = '<pre>' + oMsg.asFixture + '</pre>';
         })
         oPort.postMessage({
             'log' : 'received asFixture'

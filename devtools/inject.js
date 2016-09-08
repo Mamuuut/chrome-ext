@@ -35,6 +35,43 @@ var vUploadSpreadSheet = function(aasValues)
         var SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
         var DOC_ID = '1fm9d7riCPXGQ2GnbcFvxNtzs-TC0pm9kfkJYFv4MF-Q';
 
+        var updateSheet = function()
+        {
+            gapi.client.sheets.spreadsheets.values.update({
+                'spreadsheetId'    : DOC_ID,
+                'range'            : 'Sheet1!A1:E1000',
+                'valueInputOption' : 'RAW',
+                'values'           : aasValues
+            }).then(function(response) {
+                console.log('update', response);
+            }, function(response) {
+                console.log(response.result.error.message);
+            });
+        }
+
+        var getSheet = function()
+        {
+            gapi.client.sheets.spreadsheets.values.get({
+                'spreadsheetId' : DOC_ID,
+                'range'         : 'Sheet1!A1:E1000'
+            }).then(function(response) {
+                console.log('get', response);
+
+                var aasExistingValue = response.result.values;
+                if (aasExistingValue.length > aasValues.length) {
+                    var iNbColumn = aasValues[0].length;
+                    var iNbMissingRow = aasExistingValue.length - aasValues.length;
+                    for (var i = 0; i < iNbMissingRow; i++) {
+                        aasValues.push(_.fill(new Array(iNbColumn), ''));
+                    }
+                }
+
+                updateSheet(aasValues);
+            }, function(response) {
+                console.log(response.result.error.message);
+            });
+        }
+
         gapi.load('client', function()
         {
             gapi.auth.authorize(
@@ -45,22 +82,8 @@ var vUploadSpreadSheet = function(aasValues)
             },
             function()
             {
-                gapi.client.load('sheets', 'v4', listMajors);
+                gapi.client.load('sheets', 'v4', getSheet);
             });
         });
-
-        function listMajors()
-        {
-            gapi.client.sheets.spreadsheets.values.update({
-                'spreadsheetId'    : DOC_ID,
-                'range'            : 'Sheet1!A1:E' + aasValues.length,
-                'valueInputOption' : 'RAW',
-                'values'           : aasValues
-            }).then(function(response) {
-                console.log('update', response);
-            }, function(response) {
-                console.log(response.result.error.message);
-            });
-        }
     });
 }

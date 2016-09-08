@@ -2,13 +2,40 @@
   box-sizing: border-box;
 }
 
+#main {
+    position : absolute;
+    top      : 0;
+    right    : 0;
+    bottom   : 0;
+    left     : 0;
+}
+
+#header {
+    position         : fixed;
+    top              : 0;
+    left             : 0;
+    right            : 0;
+    background-color : #ccc;
+    padding          : 2px 5px;
+    z-index          : 1;
+}
+
+#content {
+    position         : absolute;
+    top              : 45px;
+    left             : 5px;
+    right            : 5px;
+    bottom           : 5px;
+}
+
 .module {
+    margin-bottom : 1px;
 }
 
 .module-title {
     line-height      : 20px;
-    background-color : #ddd;
-    border           : 1px solid #ccc;
+    background-color : #666;
+    color            : #fff;
     cursor           : pointer;
     padding-left     : 5px;
 }
@@ -19,9 +46,6 @@
 
 .module-content {
     border-bottom : 1px solid #ccc;
-}
-.module.off .module-content {
-    display: none;
 }
 
 .flag-icon {
@@ -57,7 +81,7 @@ dl dd input {
     line-height  : 20px;
 }
 
-button.upload {
+button {
     outline          : 0 !important;
     background-color : #999;
     color            : #fff;
@@ -71,6 +95,6 @@ button.upload {
     cursor           : pointer;
 }
 
-button.upload:hover {
+button {
     background-color : #f09000;
 }
