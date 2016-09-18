@@ -90,7 +90,7 @@ button {
     border-width     : 1px;
     border-style     : solid;
     border-color     : #777;
-    margin           : 5px 0;
+    margin           : 5px 5px;
     padding          : 5px;
     cursor           : pointer;
 }
@@ -111,6 +111,8 @@ input {
     border-color  : #777;
 }
 
-.clear-filter {
+.clear-filter,
+.fetch-google {
     float: right;
+    margin-left: 5px;
 }
