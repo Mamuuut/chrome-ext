@@ -23,7 +23,7 @@ $('.search').click(function(oEvent)
             {
                 _.forIn(oModule.oModule, function(sValue, sKey)
                 {
-                    if (sValue.toLowerCase().search(sText.toLowerCase()) !== -1 ||
+                    if ((typeof sValue === 'string' && sValue.toLowerCase().search(sText.toLowerCase()) !== -1) ||
                         sKey.toLowerCase().search(sText.toLowerCase()) !== -1) {
                         aselLine[sKey].show()
                             .closest('.module-content').show()
@@ -120,14 +120,17 @@ oPort.onMessage.addListener(function(oMsg) {
             var elGroup = $('<div class="module off" />');
 
             elGroup.append('<div class="module-title">' + sGroup + '</div>');
-            
+
             var elModule = $('<div class="module-content"></div>')
                 .data('aoModule', aoModule)
                 .data('sGroup', sGroup)
                 .hide();
-            
-            elModule.append('<div class="module-upload"><button class="upload">Upload to Spreadsheet</button><button class="download">Download Spreadsheet</button></div>');
-            
+
+            $('<div/>').appendTo(elModule)
+                .append('<button class="upload">Upload to Spreadsheet</button>')
+                .append('<button class="open">Open Spreadsheet</button>')
+                .append('<button class="download">Download Spreadsheet</button>');
+
             elGroup.append(elModule);
 
             _.forEach(aoModule, function(oModule)
@@ -165,6 +168,12 @@ oPort.onMessage.addListener(function(oMsg) {
         {
             var sGroup = $(oEvent.target).closest('.module-content').data('sGroup');
             chrome.devtools.inspectedWindow.eval('vFetchSpreadSheet("' + sGroup + '")');
+        });
+
+        $('#content').find('.open').click(function(oEvent)
+        {
+            var sGroup = $(oEvent.target).closest('.module-content').data('sGroup');
+            chrome.devtools.inspectedWindow.eval('vOpenSpreadSheet("' + sGroup + '")');
         });
 
         $('#content').find('.upload').click(function(oEvent)
