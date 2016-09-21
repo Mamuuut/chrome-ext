@@ -1,5 +1,14 @@
 $('#content').html('Connecting to deZem application…');
 
+var asFLAG_LOCALE = {
+    'de_DE' : 'de',
+    'en_GB' : 'gb',
+    'es_ES' : 'es',
+    'ru_RU' : 'ru'
+};
+var aoModuleGroup = {};
+var aselLine = {};
+
 $('.clear-filter').click(function(oEvent)
 {
     $('#content').find('.module, .line').show();
@@ -51,17 +60,23 @@ oPort.postMessage({
 
 chrome.devtools.panels.elements.onSelectionChanged.addListener(function()
 {
-    chrome.devtools.inspectedWindow.eval('setSelectedElement($0)');
+    chrome.devtools.inspectedWindow.eval('window.CInjectController.vSetSelectedElement($0)');
 });
 
-var asFLAG_LOCALE = {
-    'de_DE' : 'de',
-    'en_GB' : 'gb',
-    'es_ES' : 'es',
-    'ru_RU' : 'ru'
-};
-var aoModuleGroup = {};
-var aselLine = {};
+var vRenderLine = function(elModule, sLocale, sKey, sValue)
+{
+    var elLine = aselLine[sKey];
+
+    if (!elLine) {
+        elLine = $('<dl class="line" />');
+        elLine.append('<dt>' + sKey + '</dt>');
+        elModule.append(elLine);
+        aselLine[sKey] = elLine;
+    }
+
+    var sFlag = asFLAG_LOCALE[sLocale];
+    elLine.append('<dd><span class="flag-icon flag-icon-' + sFlag + '" /><input data-locale="' + sLocale + '" type="text" value="' + sValue + '"/></dd>');
+}
 
 oPort.onMessage.addListener(function(oMsg) {
 
@@ -75,11 +90,8 @@ oPort.onMessage.addListener(function(oMsg) {
         });
     }
 
-    // Language Module list
+    // Element selected
     if (oMsg.selected) {
-        oPort.postMessage({
-            'log' : [oMsg.selected]
-        });
 
         $('#content').find('.module, .module-content, .line').hide();
         _.forIn(aoModuleGroup, function(aoModule, sGroup)
@@ -98,6 +110,26 @@ oPort.onMessage.addListener(function(oMsg) {
         });
     }
 
+    // oLangDef update
+    if (oMsg.oLangDef) {
+
+        var elModule = aoModuleGroup[oMsg.sPath][0].elModule;
+
+        elModule.find('dl').remove();
+        _.forIn(oMsg.oLangDef.en_GB, function(sValue, sKey)
+        {
+            delete aselLine[sKey];
+        });
+
+        _.forIn(oMsg.oLangDef, function(oLocaleDef, sLocale)
+        {
+            _.forIn(oLocaleDef, function(sValue, sKey)
+            {
+                vRenderLine(elModule, sLocale, sKey, sValue);
+            });
+        });
+    }
+
     // Language Module list
     if (oMsg.aoModule) {
         $('#content').empty();
@@ -107,12 +139,8 @@ oPort.onMessage.addListener(function(oMsg) {
         aoModuleGroup = _.groupBy(oMsg.aoModule, function(oModule)
         {
             var sLocale = oModule.sModule.match(/.*\/language(\/\w+)\/.*/)[1];
-            oModule.sLocale = asFLAG_LOCALE[sLocale.replace(/\//, '')];
+            oModule.sLocale = sLocale.replace(/\//, '');
             return oModule.sModule.replace(sLocale, '');
-        });
-
-        oPort.postMessage({
-            'log' : aoModuleGroup
         });
 
         _.forIn(aoModuleGroup, function(aoModule, sGroup)
@@ -135,19 +163,9 @@ oPort.onMessage.addListener(function(oMsg) {
 
             _.forEach(aoModule, function(oModule)
             {
-
                 _.forIn(oModule.oModule, function(sValue, sKey)
                 {
-                    var elLine = aselLine[sKey];
-
-                    if (!elLine) {
-                        elLine = $('<dl class="line" />');
-                        elLine.append('<dt>' + sKey + '</dt>');
-                        elModule.append(elLine);
-                        aselLine[sKey] = elLine;
-                    }
-
-                    elLine.append('<dd><span class="flag-icon flag-icon-' + oModule.sLocale + '" /><input type="text" value="' + sValue + '"/></dd>');
+                    vRenderLine(elModule, oModule.sLocale, sKey, sValue);
                 });
 
                 oModule.elModule = elModule;
@@ -157,33 +175,26 @@ oPort.onMessage.addListener(function(oMsg) {
 
         $('#content').find('.module-title').click(function(oEvent)
         {
-
-            oPort.postMessage({
-                'log' : 'CLICK'
-            });
             $(oEvent.target).closest('.module').find('.module-content').toggle();
         });
 
         $('#content').find('.download').click(function(oEvent)
         {
             var sGroup = $(oEvent.target).closest('.module-content').data('sGroup');
-            chrome.devtools.inspectedWindow.eval('vFetchSpreadSheet("' + sGroup + '")');
+            chrome.devtools.inspectedWindow.eval('window.CInjectController.vFetchSpreadSheet("' + sGroup + '")');
         });
 
         $('#content').find('.open').click(function(oEvent)
         {
             var sGroup = $(oEvent.target).closest('.module-content').data('sGroup');
-            chrome.devtools.inspectedWindow.eval('vOpenSpreadSheet("' + sGroup + '")');
+            chrome.devtools.inspectedWindow.eval('window.CInjectController.vOpenSpreadSheet("' + sGroup + '")');
         });
 
         $('#content').find('.upload').click(function(oEvent)
         {
             var aoModule = $(oEvent.target).closest('.module-content').data('aoModule');
-            var asKeys = _.union.apply(_, _.map(_.map(aoModule, 'oModule'), _.keys));
-
-            oPort.postMessage({
-                'log' : asKeys
-            });
+            var sGroup   = $(oEvent.target).closest('.module-content').data('sGroup');
+            var asKeys   = _.union.apply(_, _.map(_.map(aoModule, 'oModule'), _.keys));
 
             var assValues = _.map(asKeys, function(sKey)
             {
@@ -195,30 +206,12 @@ oPort.onMessage.addListener(function(oMsg) {
                 assValues[0].push(oModule.sLocale);
                 _.forEach(asKeys, function(sKey, iIndex)
                 {
-                    var sValue = typeof oModule.oModule[sKey] === 'string' ? oModule.oModule[sKey] : '';
+                    var sValue = aselLine[sKey].find('input[data-locale=' + oModule.sLocale + ']').val();
                     assValues[iIndex + 1].push(sValue);
                 })
             });
 
-            chrome.devtools.inspectedWindow.eval('vUploadSpreadSheet(' + JSON.stringify(assValues) + ')');
-        });
-
-        oPort.postMessage({
-            'log' : 'received asoModule'
-        });
-    }
-
-    // Fixtures
-    if (oMsg.asFixture) {
-        $('#content').empty();
-        oMsg.asFixture.forEach(function(sFixture)
-        {
-            var oFixture = JSON.parse(sFixture);
-            // $('#content').append('<div>' + oFixture.oRequest.method + '</div>');
-            // window.document.getElementById('content').innerHTML = '<pre>' + oMsg.asFixture + '</pre>';
-        })
-        oPort.postMessage({
-            'log' : 'received asFixture'
+            chrome.devtools.inspectedWindow.eval('window.CInjectController.vUploadSpreadSheet("' + sGroup + '", ' + JSON.stringify(assValues) + ')');
         });
     }
 });
