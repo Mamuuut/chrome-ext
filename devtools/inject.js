@@ -2,6 +2,7 @@ console.log('INJECTED');
 
 require([
     'dezem/language/CLang',
+    'can/view/live',
     'https://apis.google.com/js/api.js'
 ], function(CLang)
 {
@@ -11,8 +12,25 @@ require([
         "https://www.googleapis.com/auth/drive"
     ];
 
+    var aoFileCache = {};
+
     window.CInjectController = can.Construct.extend(
         {
+
+            /**
+             * @function vPostStatus
+             *
+             * @param {String}
+             */
+
+            'vPostStatus' : function(sStatus)
+            {
+                console.log(sStatus);
+                window.postMessage({
+                    'source'  : 'dezem-devtools-extension',
+                    'sStatus' : sStatus
+                }, '*');
+            },
 
             /**
              * @function oLoadApi
@@ -22,8 +40,16 @@ require([
 
             'oLoadApi' : function()
             {
+
+                this.vPostStatus('Loading Google Api…');
                 return new Promise(function(resolve, reject)
                 {
+                    // No need to load ot twice
+                    if (gapi.client && gapi.client.sheets && gapi.client.drive) {
+                        resolve();
+                        return;
+                    }
+
                     gapi.load('client', function()
                     {
                         gapi.auth.authorize(
@@ -37,7 +63,8 @@ require([
                             Promise.all([
                                 gapi.client.load('sheets', 'v4'),
                                 gapi.client.load('drive', 'v3')
-                            ]).then(resolve);
+                            ])
+                                .then(resolve);
                         });
                     });
                 });
@@ -71,24 +98,24 @@ require([
 
             /**
              * @function vSetSelectedElement
-             * 
+             *
              * @param {HTMLElement}
              */
 
             'vSetSelectedElement' : function(el)
             {
-                console.log('setSelectedElement', el.innerHTML);
+                console.log('setSelectedElement', el.innerHTML.trim());
                 window.postMessage({
                     'source'   : 'dezem-devtools-extension',
-                    'selected' : el.innerHTML
+                    'selected' : el.innerHTML.trim()
                 }, '*');
             },
 
             /**
              * @function sGetRepPath
-             * 
+             *
              * @param {String} sPath
-             * 
+             *
              * @return {String}
              */
 
@@ -114,15 +141,31 @@ require([
             },
 
             /**
-             * @function vFetchSpreadSheet
-             * 
+             * @function oGetFile
+             *
              * @param {String} sQuery
-             * 
+             *
+             * @param {String} sPath
+             *
              * @return {Promise}
              */
 
-            'oGetFile' : function(sQuery)
+            'oGetFile' : function(sQuery, sPath)
             {
+                this.vPostStatus('Getting file …');
+
+                // Get file from cache if possible…
+                if (typeof sPath === 'string' && aoFileCache[this.sGetRepPath(sPath)]) {
+                    return new Promise(function(resolve, reject)
+                    {
+                        resolve({
+                            'result' : {
+                                'files' : [aoFileCache[this.sGetRepPath(sPath)]]
+                            }
+                        });
+                    }.bind(this));
+                }
+
                 return gapi.client.drive.files.list({
                     'fields'   : 'files(properties,name,id,webViewLink)',
                     'pageSize' : 1000,
@@ -131,20 +174,43 @@ require([
             },
 
             /**
-             * @function vFetchSpreadSheet
-             * 
+             * @function oGetAllFile
+             *
+             * @return {Promise}
+             */
+
+            'oGetAllFile' : function()
+            {
+                var sQueryAll = 'properties has {key="dezem-type" and value="home2-translation"}';
+
+                this.oLoadApi()
+                    .then(this.oGetFile.bind(this, sQueryAll, undefined))
+                    .then(function(oResponse)
+                    {
+                        oResponse.result.files.forEach(function(oFile)
+                        {
+                            aoFileCache[oFile.properties['dezem-path']] = oFile;
+                        });
+                        this.vPostStatus('');
+                    }.bind(this));
+            },
+
+            /**
+             * @function oGetSheet
+             *
              * @param {Object} oResponse
-             * 
+             *
              * @return {Promise}
              */
 
             'oGetSheet' : function(oResponse)
             {
                 if (oResponse.result.files.length > 0) {
+                    this.vPostStatus('Getting spreadsheet…');
                     return gapi.client.sheets.spreadsheets.values.get({
                         'spreadsheetId' : oResponse.result.files[0].id,
                         'range'         : 'Sheet1!A1:E1000'
-                    }); 
+                    });
                 }
                 else {
                     return new Promise(function(resolve, reject)
@@ -156,7 +222,7 @@ require([
 
             /**
              * @function vSetLangValuesFromSpreadsheet
-             * 
+             *
              * @param {Array_aas} aasValues
              */
 
@@ -179,7 +245,24 @@ require([
                 }
 
                 var oLang = new CLang();
+
+                // Hook live text method to blink updated elements
+                var text = can.view.live.text;
+                can.view.live.text = function (el, compute, parentNode, nodeList) {
+                    text.call(can.view.live, el, compute, parentNode, nodeList);
+                    compute.computeInstance.bind('change', function(ev, newVal, oldVal) {
+                        $(parentNode).fadeOut(function()
+                        {
+                            $(parentNode).fadeIn();
+                        });
+                    });
+                };
+
+                // Update language entries
                 oLang.vCopyLangObserveValues(oLangDef[oLang.sGetLocale()]);
+
+                // Restore live text method
+                can.view.live.text = text
 
                 window.postMessage({
                     'source'   : 'dezem-devtools-extension',
@@ -190,7 +273,7 @@ require([
 
             /**
              * @function vFetchSpreadSheet
-             * 
+             *
              * @param {String} sPath
              */
 
@@ -198,17 +281,16 @@ require([
             {
                 console.log(sPath);
 
-                var sQuery = typeof sPath === 'string' ?
-                    'properties has {key="dezem-path" and value="' + this.sGetRepPath(sPath) + '"}' :
-                    'properties has {key="dezem-type" and value="home2-translation"}';
+                var sQuery = 'properties has {key="dezem-path" and value="' + this.sGetRepPath(sPath) + '"}';
 
                 this.oLoadApi()
-                    .then(this.oGetFile.bind(this, sQuery))
+                    .then(this.oGetFile.bind(this, sQuery, sPath))
                     .then(this.oGetSheet.bind(this))
                     .then(function(oResponse)
                     {
                         this.vSetLangValuesFromSpreadsheet(sPath, oResponse.result.values);
                     }.bind(this))
+                    .then(this.vPostStatus.bind(this, ''))
                     .catch(function(sError)
                     {
                         console.log(sError);
@@ -217,7 +299,7 @@ require([
 
             /**
              * @function vOpenSpreadSheet
-             * 
+             *
              * @param {String} sPath
              */
 
@@ -226,7 +308,7 @@ require([
                 var sQuery = 'properties has {key="dezem-path" and value="' + this.sGetRepPath(sPath) + '"}';
 
                 this.oLoadApi()
-                    .then(this.oGetFile.bind(this, sQuery))
+                    .then(this.oGetFile.bind(this, sQuery, sPath))
                     .then(function(oResponse)
                     {
                         console.log('files.list', oResponse);
@@ -235,6 +317,7 @@ require([
                             window.open(oResponse.result.files[0].webViewLink, '_blank');
                         }
                     })
+                    .then(this.vPostStatus.bind(this, ''))
                     .catch(function(sError)
                     {
                         console.log(sError);
@@ -243,7 +326,7 @@ require([
 
             /**
              * @function vUploadSpreadSheet
-             * 
+             *
              * @param {array_aas} aasValues
              */
 
@@ -255,7 +338,7 @@ require([
                 var fileId;
 
                 this.oLoadApi()
-                    .then(this.oGetFile.bind(this, sQuery))
+                    .then(this.oGetFile.bind(this, sQuery, sPath))
                     .then(function(oResponse)
                     {
                         if (oResponse.result.files.length > 0) {
@@ -277,13 +360,15 @@ require([
 
                         this.vSetLangValuesFromSpreadsheet(sPath, aasValues);
 
+                        this.vPostStatus('Uploading spreadsheet…');
                         return gapi.client.sheets.spreadsheets.values.update({
                             'spreadsheetId'    : fileId,
                             'range'            : 'Sheet1!A1:E1000',
                             'valueInputOption' : 'RAW',
                             'values'           : aasValues
-                        });
+                        })
                     }.bind(this))
+                    .then(this.vPostStatus.bind(this, ''))
                     .catch(function(sError)
                     {
                         console.log(sError);
@@ -296,4 +381,5 @@ require([
     );
 
     window.CInjectController.vLoadModule();
+    window.CInjectController.oGetAllFile();
 });

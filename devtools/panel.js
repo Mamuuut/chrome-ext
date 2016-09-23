@@ -1,4 +1,11 @@
-$('#content').html('Connecting to deZem application…');
+
+var vSetStatus = function(sStatus)
+{
+    $('#footer').toggle(sStatus !== '');
+    $('#footer .message').html(sStatus);
+}
+
+vSetStatus('Connecting to deZem application…');
 
 var asFLAG_LOCALE = {
     'de_DE' : 'de',
@@ -13,11 +20,6 @@ $('.clear-filter').click(function(oEvent)
 {
     $('#content').find('.module, .line').show();
     $('#content').find('.module-content').hide();
-});
-
-$('.fetch-google').click(function(oEvent)
-{
-    chrome.devtools.inspectedWindow.eval('vFetchSpreadSheet()');
 });
 
 $('.search').click(function(oEvent)
@@ -81,8 +83,8 @@ var vRenderLine = function(elModule, sLocale, sKey, sValue)
 oPort.onMessage.addListener(function(oMsg) {
 
     // Init
-    if (oMsg.initComplete) {
-        $('#content').html('loading module… ');
+    if (oMsg.initComplete !== undefined) {
+        vSetStatus('Loading language modules…');
 
         oPort.postMessage({
             'tabId'          : chrome.devtools.inspectedWindow.tabId,
@@ -90,8 +92,13 @@ oPort.onMessage.addListener(function(oMsg) {
         });
     }
 
+    // Status
+    if (oMsg.sStatus !== undefined) {
+        vSetStatus(oMsg.sStatus);
+    }
+
     // Element selected
-    if (oMsg.selected) {
+    if (oMsg.selected !== undefined) {
 
         $('#content').find('.module, .module-content, .line').hide();
         _.forIn(aoModuleGroup, function(aoModule, sGroup)
@@ -111,7 +118,7 @@ oPort.onMessage.addListener(function(oMsg) {
     }
 
     // oLangDef update
-    if (oMsg.oLangDef) {
+    if (oMsg.oLangDefv) {
 
         var elModule = aoModuleGroup[oMsg.sPath][0].elModule;
 
@@ -131,7 +138,8 @@ oPort.onMessage.addListener(function(oMsg) {
     }
 
     // Language Module list
-    if (oMsg.aoModule) {
+    if (oMsg.aoModule !== undefined) {
+        vSetStatus('');
         $('#content').empty();
 
         oMsg.aoModule = _.sortBy(oMsg.aoModule, 'sModule');
