@@ -325,6 +325,45 @@ require([
             },
 
             /**
+             * @function oGetValuesDiff
+             *
+             * @param {array_aas} aasLocalValues
+             *
+             * @param {array_aas} aasRemoteValues
+             */
+
+            'oGetValuesDiff' : function(aasLocalValues, aasRemoteValues)
+            {
+                var asLocalKey = _.map(aasLocalValues, 0);
+                asLocalKey.shift();
+
+                var asRemoteKey = _.map(aasRemoteValues, 0);
+                asRemoteKey.shift();
+
+                var asAllKey = _.union(asRemoteKey, asLocalKey).sort();
+                var asLocale = _.union(aasLocalValues[0].slice(1), aasRemoteValues[0].slice(1)).sort();
+
+                _.forEach(asAllKey, function(sKey)
+                {
+                    var asLocalValues  = _.find(aasLocalValues, {0 : sKey});
+                    var asRemoteValues = _.find(aasRemoteValues, {0 : sKey});
+
+                    _.forEach(asLocale, function(sLocale)
+                    {
+                        console.log(sKey, sLocale);
+
+                        var iLocalIndex = _.indexOf(aasLocalValues[0], sLocale);
+                        var sLocalValue = asLocalValues[iLocalIndex];
+
+                        var iRemoteIndex = _.indexOf(aasRemoteValues[0], sLocale);
+                        var sRemoteValue = asRemoteValues[iRemoteIndex];
+
+                        console.log(sKey, sLocale, iLocalIndex, sLocalValue, iRemoteIndex, sRemoteValue);
+                    });
+                });
+            },
+
+            /**
              * @function vUploadSpreadSheet
              *
              * @param {array_aas} aasValues
@@ -359,6 +398,9 @@ require([
                         }
 
                         this.vSetLangValuesFromSpreadsheet(sPath, aasValues);
+
+                        this.oGetValuesDiff(aasValues, oResponse.result.values);
+                        return;
 
                         this.vPostStatus('Uploading spreadsheet…');
                         return gapi.client.sheets.spreadsheets.values.update({
