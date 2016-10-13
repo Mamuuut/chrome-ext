@@ -1,7 +1,5 @@
 window.addEventListener('message', function(oEvent)
 {
-    console.log(oEvent);
-
     // Only accept messages from the same frame
     if (oEvent.source !== window) {
         return;
@@ -11,7 +9,7 @@ window.addEventListener('message', function(oEvent)
 
     // Only accept messages that we know are ours
     if (typeof message !== 'object' || message === null ||
-        !message.source === 'dezem-devtools-extension') {
+        !message.class === 'CDezemDevTools') {
         return;
     }
 

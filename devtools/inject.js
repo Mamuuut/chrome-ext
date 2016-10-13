@@ -1,5 +1,3 @@
-console.log('INJECTED');
-
 require([
     'dezem/language/CLang',
     'can/view/live',
@@ -27,9 +25,83 @@ require([
             {
                 console.log(sStatus);
                 window.postMessage({
-                    'source'  : 'dezem-devtools-extension',
-                    'sStatus' : sStatus
+                    'class'  : 'CDezemDevTools',
+                    'method' : 'vSetStatus',
+                    'param'  : [sStatus]
                 }, '*');
+            },
+
+            /**
+             * @function vOnMouseMove
+             *
+             * @description Mouse move event listener
+             *
+             * @param {jQueryEvent} oEvent
+             */
+
+            'vOnMouseMove' : function(oEvent)
+            {
+                if (oEvent.target.getAttribute('id') !== 'pick-hover' && oEvent.target.children.length === 0) {
+
+                    var oRect = oEvent.target.getBoundingClientRect()
+                    this.elPickHover.css({
+                        'top'    : oRect.top + 'px',
+                        'left'   : oRect.left + 'px',
+                        'width'  : oRect.width + 'px',
+                        'height' : oRect.height + 'px'
+                    });
+
+                    var sText = oEvent.target.value || oEvent.target.innerText;
+
+                    window.postMessage({
+                        'class'  : 'CDezemDevTools',
+                        'method' : 'vSetSearchText',
+                        'param'  : [sText.trim()]
+                    }, '*');
+                }
+            },
+
+            /**
+             * @function vSetPickMode
+             *
+             * @description Activate/Deactivate Element picking mode
+             *
+             * @param {Boolean} bActive
+             */
+
+            'vSetPickMode' : function(bActive)
+            {
+                console.log('vSetPickMode', bActive);
+                if (bActive) {
+                    this.oMouseMoveListener = this.vOnMouseMove.bind(this);
+                    this.oMouseDownListener = function(oEvent)
+                    {
+                        window.postMessage({
+                            'class'  : 'CDezemDevTools',
+                            'method' : 'vTogglePickMode',
+                            'param'  : null
+                        }, '*');
+
+                        return false;
+                    }
+
+                    this.elPickHover = $('<div id="pick-hover"/>').css({
+                        'background'     : 'rgba(255, 127, 0, .5)',
+                        'position'       : 'absolute',
+                        'zIndex'         : 10000
+                    });
+                    $('body').append(this.elPickHover);
+
+                    $(document).on('mousemove', this.oMouseMoveListener);
+                    $(document).on('mousedown', this.oMouseDownListener);
+                }
+                else {
+                    this.elPickHover.remove();
+                    delete this.elPickHover;
+
+                    $(document).off('mousemove', this.oMouseMoveListener);
+                    $(document).off('mousedown', this.oMouseDownListener);
+                }
             },
 
             /**
@@ -80,19 +152,84 @@ require([
                 var asLanguageModule = _.filter(asModule, function(sModule)
                 {
                     return sModule.match(/.*\/language\/.*\.json/g) !== null;
-                });
+                }).sort();
 
+                var asGroup  = [];
+                var asLocale = [];
+
+                // Return the list of language modules with converted plural rules
                 var aoModule = _.map(asLanguageModule, function(sModule)
                 {
+                    var oModule = JSON.parse(require(sModule));
+                    var oKeyValues = {};
+                    _.forEach(oModule, function(mValue, sKey)
+                    {
+                        if (typeof mValue === 'string') {
+                            oKeyValues[sKey] = mValue;
+                        }
+                        if (typeof mValue === 'object') {
+                            _.forEach(mValue, function(sValue, iIndex)
+                            {
+                                oKeyValues[sKey + '[' + iIndex + ']'] = sValue;
+                            });
+                        }
+                    });
+
+                    var sLocale = sModule.match(/.*\/language\/(\w+)\/.*/)[1];
+                    var sGroup  = sModule.replace('\/' + sLocale, '');
+
+                    asGroup.push(sGroup);
+                    asLocale.push(sLocale);
+
                     return {
-                        'sModule' : sModule,
-                        'oModule' : JSON.parse(require(sModule))
-                    }
+                        'sGroup'     : sGroup,
+                        'sLocale'    : sLocale,
+                        'oKeyValues' : oKeyValues
+                    };
+                });
+
+                asGroup = _.uniq(asGroup);
+                asLocale = _.uniq(asLocale);
+
+                aoModuleGroup = {};
+
+                // Create empty values for missing locale entries
+                _.forEach(asGroup, function(sGroup)
+                {
+                    aoModuleGroup[sGroup] = [];
+
+                    var asKey = [];
+
+                    _.forEach(asLocale, function(sLocale)
+                    {
+                        var oModule = _.find(aoModule, {'sGroup' : sGroup, 'sLocale' : sLocale});
+                        asKey = _.union(asKey, _.keys(oModule.oKeyValues));
+                    });
+
+                    asKey.sort();
+
+                    _.forEach(asLocale, function(sLocale)
+                    {
+                        var oModule = _.merge({
+                            'sGroup'     : sGroup,
+                            'sLocale'    : sLocale,
+                            'oKeyValues' : {}
+                        }, _.find(aoModule, {'sGroup' : sGroup, 'sLocale' : sLocale}));
+
+                        // Set undefined keys to ''
+                        _.forEach(asKey, function(sKey)
+                        {
+                            oModule.oKeyValues[sKey] = oModule.oKeyValues[sKey] || '';
+                        });
+
+                        aoModuleGroup[sGroup].push(oModule);
+                    });
                 });
 
                 window.postMessage({
-                    'source'   : 'dezem-devtools-extension',
-                    'aoModule' : aoModule
+                    'class'  : 'CDezemDevTools',
+                    'method' : 'vRenderModuleGroups',
+                    'param'  : [aoModuleGroup]
                 }, '*');
             },
 
@@ -106,22 +243,23 @@ require([
             {
                 console.log('setSelectedElement', el.innerHTML.trim());
                 window.postMessage({
-                    'source'   : 'dezem-devtools-extension',
-                    'selected' : el.innerHTML.trim()
+                    'class'  : 'CDezemDevTools',
+                    'method' : 'vSetSearchText',
+                    'param'  : [el.innerHTML.trim()]
                 }, '*');
             },
 
             /**
              * @function sGetRepPath
              *
-             * @param {String} sPath
+             * @param {String} sGroup
              *
              * @return {String}
              */
 
-            'sGetRepPath' : function(sPath)
+            'sGetRepPath' : function(sGroup)
             {
-                sPath = sPath.replace('text!', '').replace('.json', '').replace('/language', '');
+                var sPath = sGroup.replace('text!', '').replace('.json', '').replace('/language', '');
                 var sFirst = sPath.split('/')[0];
 
                 switch(sFirst) {
@@ -132,7 +270,7 @@ require([
                         return 'app-' + sPath;
                     case 'widgets' :
                         var asPath = sPath.split('/');
-                        asPath.shift()
+                        asPath.shift();
                         return 'widget-' + asPath.join('/');
                     case 'dezem' :
                     case 'resource' :
@@ -145,22 +283,22 @@ require([
              *
              * @param {String} sQuery
              *
-             * @param {String} sPath
+             * @param {String} sGroup
              *
              * @return {Promise}
              */
 
-            'oGetFile' : function(sQuery, sPath)
+            'oGetFile' : function(sQuery, sGroup)
             {
                 this.vPostStatus('Getting file …');
 
                 // Get file from cache if possible…
-                if (typeof sPath === 'string' && aoFileCache[this.sGetRepPath(sPath)]) {
+                if (typeof sGroup === 'string' && aoFileCache[this.sGetRepPath(sGroup)]) {
                     return new Promise(function(resolve, reject)
                     {
                         resolve({
                             'result' : {
-                                'files' : [aoFileCache[this.sGetRepPath(sPath)]]
+                                'files' : [aoFileCache[this.sGetRepPath(sGroup)]]
                             }
                         });
                     }.bind(this));
@@ -223,24 +361,39 @@ require([
             /**
              * @function vSetLangValuesFromSpreadsheet
              *
+             * @param {String} sGroup
+             *
              * @param {Array_aas} aasValues
              */
 
-            'vSetLangValuesFromSpreadsheet' : function(sPath, aasValues)
+            'vSetLangValuesFromSpreadsheet' : function(sGroup, aasValues)
             {
-                console.log('sheets.get', aasValues);
-                var oLangDef = {};
+                var oLangDef           = {};
+                var asoLocaleKeyValues = {};
 
                 for (var iCol = 1, iNbCol = aasValues[0].length; iCol < iNbCol; iCol++) {
                     var sLocale = aasValues[0][iCol];
 
-                    oLangDef[sLocale] = {};
+                    oLangDef[sLocale]           = {};
+                    asoLocaleKeyValues[sLocale] = {};
 
                     for (var iRow = 1, iNbRow = aasValues.length; iRow < iNbRow; iRow++) {
                         var sKey   = aasValues[iRow][0];
-                        var sValue = aasValues[iRow][iCol];
+                        var sValue = aasValues[iRow][iCol] || '';
 
-                        _.set(oLangDef[sLocale], sKey, sValue);
+                        asoLocaleKeyValues[sLocale][sKey] = sValue;
+
+                        var asPluralRuleMatch = sKey.match(/^(.*)\[(\w+)\]$/);
+                        if (asPluralRuleMatch) {
+                            sKey = asPluralRuleMatch[1];
+                            var sPluralIndex = asPluralRuleMatch[2];
+
+                            oLangDef[sLocale][sKey] = oLangDef[sLocale][sKey] || {};
+                            oLangDef[sLocale][sKey][sPluralIndex] = sValue;
+                        }
+                        else {
+                            oLangDef[sLocale][sKey] = sValue;
+                        }
                     }
                 }
 
@@ -262,33 +415,33 @@ require([
                 oLang.vCopyLangObserveValues(oLangDef[oLang.sGetLocale()]);
 
                 // Restore live text method
-                can.view.live.text = text
+                can.view.live.text = text;
 
                 window.postMessage({
-                    'source'   : 'dezem-devtools-extension',
-                    'oLangDef' : oLangDef,
-                    'sPath'    : sPath
+                    'class'  : 'CDezemDevTools',
+                    'method' : 'vUpdateModule',
+                    'param'  : [sGroup, asoLocaleKeyValues]
                 }, '*');
             },
 
             /**
              * @function vFetchSpreadSheet
              *
-             * @param {String} sPath
+             * @param {String} sGroup
              */
 
-            'vFetchSpreadSheet' : function(sPath)
+            'vFetchSpreadSheet' : function(sGroup)
             {
-                console.log(sPath);
+                console.log(sGroup);
 
-                var sQuery = 'properties has {key="dezem-path" and value="' + this.sGetRepPath(sPath) + '"}';
+                var sQuery = 'properties has {key="dezem-path" and value="' + this.sGetRepPath(sGroup) + '"}';
 
                 this.oLoadApi()
-                    .then(this.oGetFile.bind(this, sQuery, sPath))
+                    .then(this.oGetFile.bind(this, sQuery, sGroup))
                     .then(this.oGetSheet.bind(this))
                     .then(function(oResponse)
                     {
-                        this.vSetLangValuesFromSpreadsheet(sPath, oResponse.result.values);
+                        this.vSetLangValuesFromSpreadsheet(sGroup, oResponse.result.values);
                     }.bind(this))
                     .then(this.vPostStatus.bind(this, ''))
                     .catch(function(sError)
@@ -300,15 +453,15 @@ require([
             /**
              * @function vOpenSpreadSheet
              *
-             * @param {String} sPath
+             * @param {String} sGroup
              */
 
-            'vOpenSpreadSheet' : function(sPath)
+            'vOpenSpreadSheet' : function(sGroup)
             {
-                var sQuery = 'properties has {key="dezem-path" and value="' + this.sGetRepPath(sPath) + '"}';
+                var sQuery = 'properties has {key="dezem-path" and value="' + this.sGetRepPath(sGroup) + '"}';
 
                 this.oLoadApi()
-                    .then(this.oGetFile.bind(this, sQuery, sPath))
+                    .then(this.oGetFile.bind(this, sQuery, sGroup))
                     .then(function(oResponse)
                     {
                         console.log('files.list', oResponse);
@@ -325,15 +478,18 @@ require([
             },
 
             /**
-             * @function oGetValuesDiff
+             * @function oGetMergedValues
              *
              * @param {array_aas} aasLocalValues
              *
              * @param {array_aas} aasRemoteValues
              */
 
-            'oGetValuesDiff' : function(aasLocalValues, aasRemoteValues)
+            'oGetMergedValues' : function(aasLocalValues, aasRemoteValues)
             {
+                var aoDiff = [];
+                var aasMergedValues = [];
+
                 var asLocalKey = _.map(aasLocalValues, 0);
                 asLocalKey.shift();
 
@@ -343,41 +499,75 @@ require([
                 var asAllKey = _.union(asRemoteKey, asLocalKey).sort();
                 var asLocale = _.union(aasLocalValues[0].slice(1), aasRemoteValues[0].slice(1)).sort();
 
+                aasMergedValues.push([''].concat(asLocale));
+
                 _.forEach(asAllKey, function(sKey)
                 {
                     var asLocalValues  = _.find(aasLocalValues, {0 : sKey});
                     var asRemoteValues = _.find(aasRemoteValues, {0 : sKey});
 
+                    var asRow = [sKey];
+
                     _.forEach(asLocale, function(sLocale)
                     {
-                        console.log(sKey, sLocale);
+                        var sLocalValue = '';
+                        if (asLocalValues) {
+                            var iLocalIndex = _.indexOf(aasLocalValues[0], sLocale);
+                            sLocalValue = asLocalValues[iLocalIndex] || '';
+                        }
 
-                        var iLocalIndex = _.indexOf(aasLocalValues[0], sLocale);
-                        var sLocalValue = asLocalValues[iLocalIndex];
+                        var sRemoteValue = '';
+                        if (asRemoteValues) {
+                            var iRemoteIndex = _.indexOf(aasRemoteValues[0], sLocale);
+                            sRemoteValue = asRemoteValues[iRemoteIndex] || '';
+                        }
 
-                        var iRemoteIndex = _.indexOf(aasRemoteValues[0], sLocale);
-                        var sRemoteValue = asRemoteValues[iRemoteIndex];
+                        if (sRemoteValue !== sLocalValue) {
+                            aoDiff.push({
+                                'sKey'         : sKey,
+                                'sLocale'      : sLocale,
+                                'sLocalValue'  : sLocalValue,
+                                'sRemoteValue' : sRemoteValue
+                            })
+                        }
 
-                        console.log(sKey, sLocale, iLocalIndex, sLocalValue, iRemoteIndex, sRemoteValue);
+                        asRow.push(sLocalValue);
                     });
+
+                    aasMergedValues.push(asRow);
                 });
+
+                return {
+                    'aoDiff'          : aoDiff,
+                    'aasMergedValues' : aasMergedValues
+                }
             },
 
             /**
-             * @function vUploadSpreadSheet
+             * @function vCheckLocalRemoteDiff
              *
              * @param {array_aas} aasValues
              */
 
-            'vUploadSpreadSheet' : function(sPath, aasValues)
+            'vCheckLocalRemoteDiff' : function(sGroup, aasValues)
             {
-                console.log(sPath);
+                _.forEach(aasValues, function(asValues, iRow)
+                {
+                    if (iRow > 0) {
+                        _.forEach(asValues, function(sValue, iCol)
+                        {
+                            if (iCol > 0) {
+                                asValues[iCol] = JSON.parse(sValue);
+                            }
+                        });
+                    }
+                });
 
-                var sQuery = 'properties has {key="dezem-path" and value="' + this.sGetRepPath(sPath) + '"}';
+                var sQuery = 'properties has {key="dezem-path" and value="' + this.sGetRepPath(sGroup) + '"}';
                 var fileId;
 
                 this.oLoadApi()
-                    .then(this.oGetFile.bind(this, sQuery, sPath))
+                    .then(this.oGetFile.bind(this, sQuery, sGroup))
                     .then(function(oResponse)
                     {
                         if (oResponse.result.files.length > 0) {
@@ -387,28 +577,51 @@ require([
                     }.bind(this))
                     .then(function(oResponse)
                     {
+                        this.vSetLangValuesFromSpreadsheet(sGroup, aasValues);
 
-                        var aasExistingValue = oResponse.result.values;
-                        if (aasExistingValue.length > aasValues.length) {
-                            var iNbColumn = aasValues[0].length;
-                            var iNbMissingRow = aasExistingValue.length - aasValues.length;
-                            for (var i = 0; i < iNbMissingRow; i++) {
-                                aasValues.push(_.fill(new Array(iNbColumn), ''));
-                            }
-                        }
+                        var oMergedValue = this.oGetMergedValues(aasValues, oResponse.result.values);
 
-                        this.vSetLangValuesFromSpreadsheet(sPath, aasValues);
+                        window.postMessage({
+                            'class'  : 'CDezemDevTools',
+                            'method' : 'vConfirmUploadDiff',
+                            'param'  : [sGroup, oMergedValue]
+                        }, '*');
 
-                        this.oGetValuesDiff(aasValues, oResponse.result.values);
-                        return;
+                        return new Promise(function(resolve, reject)
+                        {
+                            resolve();
+                        }.bind(this));
+                    }.bind(this))
+                    .then(this.vPostStatus.bind(this, ''))
+                    .catch(function(sError)
+                    {
+                        console.log(sError);
+                    });
+            },
 
+            /**
+             * @function vUploadSpreadSheet
+             *
+             * @param {array_aas} aasValues
+             */
+
+            'vUploadSpreadSheet' : function(sGroup, aasValues)
+            {
+                this.vPostStatus('Uploading to spreadsheet…');
+
+                var sQuery = 'properties has {key="dezem-path" and value="' + this.sGetRepPath(sGroup) + '"}';
+
+                this.oLoadApi()
+                    .then(this.oGetFile.bind(this, sQuery, sGroup))
+                    .then(function(oResponse)
+                    {
                         this.vPostStatus('Uploading spreadsheet…');
                         return gapi.client.sheets.spreadsheets.values.update({
-                            'spreadsheetId'    : fileId,
+                            'spreadsheetId'    : oResponse.result.files[0].id,
                             'range'            : 'Sheet1!A1:E1000',
                             'valueInputOption' : 'RAW',
                             'values'           : aasValues
-                        })
+                        });
                     }.bind(this))
                     .then(this.vPostStatus.bind(this, ''))
                     .catch(function(sError)

@@ -1,54 +1,9 @@
-
-var vSetStatus = function(sStatus)
-{
-    $('#footer').toggle(sStatus !== '');
-    $('#footer .message').html(sStatus);
-}
-
-vSetStatus('Connecting to deZem application…');
-
 var asFLAG_LOCALE = {
     'de_DE' : 'de',
     'en_GB' : 'gb',
     'es_ES' : 'es',
     'ru_RU' : 'ru'
 };
-var aoModuleGroup = {};
-var aselLine = {};
-
-$('.clear-filter').click(function(oEvent)
-{
-    $('#content').find('.module, .line').show();
-    $('#content').find('.module-content').hide();
-});
-
-$('.search').click(function(oEvent)
-{
-    var sText = $('.search-input').val();
-    if (sText) {
-
-        $('#content').find('.module, .module-content, .line').hide();
-        _.forIn(aoModuleGroup, function(aoModule, sGroup)
-        {
-            _.forEach(aoModule, function(oModule)
-            {
-                _.forIn(oModule.oModule, function(sValue, sKey)
-                {
-                    if ((typeof sValue === 'string' && sValue.toLowerCase().search(sText.toLowerCase()) !== -1) ||
-                        sKey.toLowerCase().search(sText.toLowerCase()) !== -1) {
-                        aselLine[sKey].show()
-                            .closest('.module-content').show()
-                            .closest('.module').show();
-                    }
-                });
-            });
-        });
-    }
-    else {
-        $('#content').find('.module, .line').show();
-        $('#content').find('.module-content').hide();
-    }
-});
 
 // Create a connection to the background page
 var oPort = chrome.runtime.connect({
@@ -65,161 +20,410 @@ chrome.devtools.panels.elements.onSelectionChanged.addListener(function()
     chrome.devtools.inspectedWindow.eval('window.CInjectController.vSetSelectedElement($0)');
 });
 
-var vRenderLine = function(elModule, sLocale, sKey, sValue)
-{
-    var elLine = aselLine[sKey];
+var oPanel = {
 
-    if (!elLine) {
-        elLine = $('<dl class="line" />');
-        elLine.append('<dt>' + sKey + '</dt>');
-        elModule.append(elLine);
-        aselLine[sKey] = elLine;
-    }
+    /**
+     * @property {Array_ao}
+     * @description List of Module Group by group name
+     */
 
-    var sFlag = asFLAG_LOCALE[sLocale];
-    elLine.append('<dd><span class="flag-icon flag-icon-' + sFlag + '" /><input data-locale="' + sLocale + '" type="text" value="' + sValue + '"/></dd>');
-}
+    'asoModuleGroup' : {},
 
-oPort.onMessage.addListener(function(oMsg) {
+    /**
+     * @property {Array_asel}
+     * @description List of Language line per language key
+     */
 
-    // Init
-    if (oMsg.initComplete !== undefined) {
-        vSetStatus('Loading language modules…');
+    'aselLine' : {},
+
+    /**
+     * @property {Boolean}
+     * @description Is Pick mode actiove
+     */
+
+    'bPickMode' : false,
+
+    /**
+     * @function vEvalScript
+     *
+     * @description Evaluate inject function call
+     *
+     * @param {String} sMethod
+     *
+     * @param {Array_as} asParam
+     */
+
+    'vEvalScript' : function(sMethod, asParam)
+    {
+        var sParam = '';
+
+        if (typeof asParam === 'string') {
+            sParam = asParam;
+        }
+        else if (asParam && asParam.length) {
+            sParam = asParam.join(',');
+        }
+
+        var sEval = 'window.CInjectController.' + sMethod + '(' + sParam + ')';
+        chrome.devtools.inspectedWindow.eval(sEval);
+    },
+
+    /**
+     * @function vScrollToModule
+     *
+     * @description Scroll to the first visible module
+     */
+
+    'vScrollToModule' : function(elModule)
+    {
+        var iScrollTop = elModule.offset().top + $('#content').scrollTop() - $('#content').offset().top;
+        $('#content').scrollTop(iScrollTop);
+    },
+
+    /**
+     * @function vRenderLine
+     *
+     * @description Render a language line
+     *
+     * @param {jQueryElement} elModule
+     *
+     * @param {String} sGroup
+     *
+     * @param {String} sLocale
+     *
+     * @param {String} sKey
+     *
+     * @param {String} sValue
+     */
+
+    'vRenderLine' : function(elModule, sGroup, sLocale, sKey, sValue)
+    {
+        var elLine = _.get(this.aselLine, [sGroup, sKey]);
+
+        if (!elLine) {
+
+            elLine = $('<dl class="line" />');
+            elLine.append('<dt>' + sKey + '</dt>');
+            elModule.append(elLine);
+
+            _.set(this.aselLine, [sGroup, sKey], elLine);
+        }
+
+        var sFlag = asFLAG_LOCALE[sLocale];
+        elLine.append('<dd><span class="flag-icon flag-icon-' + sFlag + '" /><input data-locale="' + sLocale + '" type="text"/></dd>');
+        elLine.find('input').last().val(sValue);
+    },
+
+    /**
+     * @function vSearchText
+     *
+     * @description Search all keys and values for a matching text
+     *
+     * @param {String} sText
+     *
+     * @param {Boolean} bForce
+     */
+
+    'vSetSearchText' : function(sText, bForce)
+    {
+        if (!bForce && sText === $('.search-input').val()) {
+            return;
+        }
+
+        if (sText && sText.length > 2) {
+
+            $('.search-input').val(sText);
+
+            $('#content').find('.module, .module-content, .line').hide();
+            _.forIn(this.asoModuleGroup, function(aoModule, sGroup)
+            {
+                _.forEach(aoModule, function(oModule)
+                {
+                    _.forIn(oModule.oKeyValues, function(sValue, sKey)
+                    {
+                        if ((typeof sValue === 'string' && sValue.toLowerCase().search(sText.toLowerCase()) !== -1) ||
+                            sKey.toLowerCase().search(sText.toLowerCase()) !== -1) {
+
+                            _.get(this.aselLine, [sGroup, sKey])
+                                .show()
+                                .closest('.module-content').show()
+                                .closest('.module').show();
+                        }
+                    }.bind(this));
+                }.bind(this));
+            }.bind(this));
+        }
+        else {
+            $('#content').find('.module, .line').show();
+            $('#content').find('.module-content').hide();
+        }
+
+        $('#content').scrollTop(0);
+    },
+
+    /**
+     * @function vTogglePickMode
+     *
+     * @description Activate/Deactivate Element picking mode
+     */
+
+    'vTogglePickMode' : function()
+    {
+        this.bPickMode = !this.bPickMode;
+        $('.pick').toggleClass('active', this.bPickMode);
+        this.vEvalScript('vSetPickMode', JSON.stringify(this.bPickMode));
+    },
+
+    /**
+     * @function vInitComplete
+     *
+     * @description Extension has been initialized
+     */
+
+    'vInitComplete' : function()
+    {
+        this.vSetStatus('Loading language modules…');
 
         oPort.postMessage({
             'tabId'          : chrome.devtools.inspectedWindow.tabId,
             'scriptToInject' : 'devtools/content.js'
         });
-    }
+    },
 
-    // Status
-    if (oMsg.sStatus !== undefined) {
-        vSetStatus(oMsg.sStatus);
-    }
 
-    // Element selected
-    if (oMsg.selected !== undefined) {
+    /**
+     * @function vSetStatus
+     *
+     * @description Set the current status in the footer
+     *
+     * @param {String} sStatus
+     */
 
-        $('#content').find('.module, .module-content, .line').hide();
-        _.forIn(aoModuleGroup, function(aoModule, sGroup)
-        {
-            _.forEach(aoModule, function(oModule)
-            {
-                _.forIn(oModule.oModule, function(sValue, sKey)
-                {
-                    if (sValue == oMsg.selected) {
-                        aselLine[sKey].show()
-                            .closest('.module-content').show()
-                            .closest('.module').show();
-                    }
-                });
-            });
-        });
-    }
+    'vSetStatus' : function(sStatus)
+    {
+        $('#footer').toggle(sStatus !== '');
+        $('#footer .message').html(sStatus);
+    },
 
-    // oLangDef update
-    if (oMsg.oLangDefv) {
+    /**
+     * @function vUpdateModule
+     *
+     * @description Update a module key/values for all locales
+     *
+     * @param {String} sGroup
+     *
+     * @param {Array_aso} asoLocaleKeyValues
+     */
 
-        var elModule = aoModuleGroup[oMsg.sPath][0].elModule;
+    'vUpdateModule' : function(sGroup, asoLocaleKeyValues)
+    {
+        var elModule = this.asoModuleGroup[sGroup][0].elModule;
 
         elModule.find('dl').remove();
-        _.forIn(oMsg.oLangDef.en_GB, function(sValue, sKey)
+        _.forIn(asoLocaleKeyValues.en_GB, function(sValue, sKey)
         {
-            delete aselLine[sKey];
-        });
+            _.unset(this.aselLine, [sGroup, sKey]);
+        }.bind(this));
 
-        _.forIn(oMsg.oLangDef, function(oLocaleDef, sLocale)
+        _.forIn(asoLocaleKeyValues, function(oLocaleDef, sLocale)
         {
             _.forIn(oLocaleDef, function(sValue, sKey)
             {
-                vRenderLine(elModule, sLocale, sKey, sValue);
-            });
-        });
-    }
+                this.vRenderLine(elModule, sGroup, sLocale, sKey, sValue);
+            }.bind(this));
+        }.bind(this));
 
-    // Language Module list
-    if (oMsg.aoModule !== undefined) {
-        vSetStatus('');
+        var sText = $('.search-input').val();
+        if (sText) {
+            oPanel.vSetSearchText(sText, true);
+        }
+    },
+
+    /**
+     * @function vConfirmUploadDiff
+     *
+     * @description Show Local/Remote diff before uploading
+     *
+     * @param {String} sGroup
+     *
+     * @param {Object} oMergedValue
+     */
+
+    'vConfirmUploadDiff' : function(sGroup, oMergedValue)
+    {
+        $('#diff').empty();
+
+        _.forEach(oMergedValue.aoDiff, function(oDiff)
+        {
+            var elDiff = $('<div class="diff-line" />');
+
+            var sFlag = asFLAG_LOCALE[oDiff.sLocale];
+
+            var elTitle = $('<div class="diff-title" />');
+
+            elTitle.append('<span class="flag-icon flag-icon-' + sFlag + '" />');
+            elTitle.append('<span>' + oDiff.sKey + '</span>');
+
+            elDiff.append(elTitle);
+
+            elDiff.append('<div class="diff-local">' + (oDiff.sLocalValue || '[NO VALUE]') + '</div>');
+            elDiff.append('<div class="diff-remote">' + (oDiff.sRemoteValue || '[NO VALUE]') + '</div>');
+
+            $('#diff').append(elDiff);
+        });
+
+        var elHeader = $('<div class="diff-header" />');
+        elHeader.append('<span>' + oMergedValue.aoDiff.length + ' change(s).</span>');
+        elHeader.append('<button class="diff-confirm">Confirm</button>');
+        elHeader.append('<button class="diff-cancel">Cancel</button>');
+
+        elHeader.find('.diff-cancel').click(function(oEvent)
+        {
+            $('#diff').hide();
+            $('#content').show();
+        });
+
+        elHeader.find('.diff-confirm').click(function(oEvent)
+        {
+            $('#diff').hide();
+            $('#content').show();
+            var sEval = 'window.CInjectController.vUploadSpreadSheet("' + sGroup + '", ' + JSON.stringify(oMergedValue.aasMergedValues) + ')';
+            chrome.devtools.inspectedWindow.eval(sEval);
+        });
+
+        $('#diff').append(elHeader);
+
+        $('#diff').show();
+        $('#content').hide();
+    },
+
+    /**
+     * @function vRenderModuleGroups
+     *
+     * @description Render all module groups
+     *
+     * @param {Array_ao} asoModuleGroup
+     */
+
+    'vRenderModuleGroups' : function(asoModuleGroup)
+    {
+        this.vSetStatus('');
         $('#content').empty();
 
-        oMsg.aoModule = _.sortBy(oMsg.aoModule, 'sModule');
+        this.asoModuleGroup = asoModuleGroup;
 
-        aoModuleGroup = _.groupBy(oMsg.aoModule, function(oModule)
-        {
-            var sLocale = oModule.sModule.match(/.*\/language(\/\w+)\/.*/)[1];
-            oModule.sLocale = sLocale.replace(/\//, '');
-            return oModule.sModule.replace(sLocale, '');
-        });
-
-        _.forIn(aoModuleGroup, function(aoModule, sGroup)
+        _.forIn(asoModuleGroup, function(aoModule, sGroup)
         {
             var elGroup = $('<div class="module off" />');
 
-            elGroup.append('<div class="module-title">' + sGroup + '</div>');
+            var sTitle = _.map(sGroup.replace(/text!(.*)language\/(.*)\.json/, '$1$2').split('/'), function(sFolder)
+            {
+                return '<span class="folder">' + sFolder + '</span>';
+            }).join('/');
+            elGroup.append('<div class="module-title"><span class="path">' + sTitle + '</span></div>');
 
             var elModule = $('<div class="module-content"></div>')
                 .data('aoModule', aoModule)
                 .data('sGroup', sGroup)
                 .hide();
 
-            $('<div/>').appendTo(elModule)
-                .append('<button class="upload">Upload to Spreadsheet</button>')
-                .append('<button class="open">Open Spreadsheet</button>')
-                .append('<button class="download">Download Spreadsheet</button>');
+            elGroup.find('.module-title')
+                .append('<span class="button-cell"><button class="upload">Upload</button></span>')
+                .append('<span class="button-cell"><button class="open">Open</button></span>')
+                .append('<span class="button-cell"><button class="download">Download</button></span>');
 
             elGroup.append(elModule);
 
             _.forEach(aoModule, function(oModule)
             {
-                _.forIn(oModule.oModule, function(sValue, sKey)
+                _.forIn(oModule.oKeyValues, function(sValue, sKey)
                 {
-                    vRenderLine(elModule, oModule.sLocale, sKey, sValue);
-                });
+                    this.vRenderLine(elModule, sGroup, oModule.sLocale, sKey, sValue);
+                }.bind(this));
 
                 oModule.elModule = elModule;
-            });
+            }.bind(this));
+
             $('#content').append(elGroup);
-        });
+
+        }.bind(this));
 
         $('#content').find('.module-title').click(function(oEvent)
         {
             $(oEvent.target).closest('.module').find('.module-content').toggle();
-        });
+            this.vScrollToModule($(oEvent.target).closest('.module'));
+        }.bind(this));
 
         $('#content').find('.download').click(function(oEvent)
         {
-            var sGroup = $(oEvent.target).closest('.module-content').data('sGroup');
-            chrome.devtools.inspectedWindow.eval('window.CInjectController.vFetchSpreadSheet("' + sGroup + '")');
-        });
+            var elModuleContent = $(oEvent.target).closest('.module').find('.module-content');
+            var sGroup = elModuleContent.data('sGroup');
+            this.vEvalScript('vFetchSpreadSheet', JSON.stringify(sGroup));
+            return false;
+        }.bind(this));
 
         $('#content').find('.open').click(function(oEvent)
         {
-            var sGroup = $(oEvent.target).closest('.module-content').data('sGroup');
-            chrome.devtools.inspectedWindow.eval('window.CInjectController.vOpenSpreadSheet("' + sGroup + '")');
-        });
+            var elModuleContent = $(oEvent.target).closest('.module').find('.module-content');
+            var sGroup = elModuleContent.data('sGroup');
+            this.vEvalScript('vOpenSpreadSheet', JSON.stringify(sGroup));
+            return false;
+        }.bind(this));
 
         $('#content').find('.upload').click(function(oEvent)
         {
-            var aoModule = $(oEvent.target).closest('.module-content').data('aoModule');
-            var sGroup   = $(oEvent.target).closest('.module-content').data('sGroup');
-            var asKeys   = _.union.apply(_, _.map(_.map(aoModule, 'oModule'), _.keys));
-
+            var elModuleContent = $(oEvent.target).closest('.module').find('.module-content');
+            var aoModule = elModuleContent.data('aoModule');
+            var sGroup   = elModuleContent.data('sGroup');
+            var asKeys   = _.union.apply(_, _.map(_.map(aoModule, 'oKeyValues'), _.keys));
             var assValues = _.map(asKeys, function(sKey)
             {
                 return [sKey];
             });
+
             assValues.unshift(['Keys']);
+
             _.forEach(aoModule, function(oModule)
             {
                 assValues[0].push(oModule.sLocale);
                 _.forEach(asKeys, function(sKey, iIndex)
                 {
-                    var sValue = aselLine[sKey].find('input[data-locale=' + oModule.sLocale + ']').val();
-                    assValues[iIndex + 1].push(sValue);
-                })
-            });
+                    var sValue = _.get(this.aselLine, [sGroup, sKey]).find('input[data-locale=' + oModule.sLocale + ']').val();
+                    assValues[iIndex + 1].push(JSON.stringify(sValue));
+                }.bind(this));
+            }.bind(this));
 
-            chrome.devtools.inspectedWindow.eval('window.CInjectController.vUploadSpreadSheet("' + sGroup + '", ' + JSON.stringify(assValues) + ')');
-        });
+            this.vEvalScript('vCheckLocalRemoteDiff', [JSON.stringify(sGroup), JSON.stringify(assValues)]);
+            return false;
+        }.bind(this));
+    }
+};
+
+oPort.onMessage.addListener(function(oMsg)
+{
+    var sMethod = oMsg.method;
+    var amParam = oMsg.param;
+
+    if (oPanel[sMethod]) {
+        oPanel[sMethod].apply(oPanel, amParam);
     }
 });
+
+$('.clear-filter').click(function(oEvent)
+{
+    $('#content').find('.module, .line').show();
+    $('#content').find('.module-content').hide();
+});
+
+$('.pick').click(function(oEvent)
+{
+    oPanel.vTogglePickMode();
+});
+
+$('.search-input').keyup(function(oEvent)
+{
+    var sText = $('.search-input').val();
+    oPanel.vSetSearchText(sText, true);
+});
+
+oPanel.vSetStatus('Connecting to deZem application…');

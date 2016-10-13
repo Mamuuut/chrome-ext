@@ -61,7 +61,9 @@ chrome.runtime.onConnect.addListener(
                 if (oMsg.init) {
                     connections[oMsg.tabId] = oPort;
                     oPort.postMessage({
-                        'initComplete' : true
+                        'class'  : 'CDezemDevTools',
+                        'method' : 'vInitComplete',
+                        'param'  : null
                     });
                     return;
                 }
