@@ -1,5 +1,3 @@
-console.log('POPUP');
-
 function getCurrentTabUrl(callback)
 {
     var queryInfo = {
@@ -9,67 +7,64 @@ function getCurrentTabUrl(callback)
 
     chrome.tabs.query(queryInfo, function(tabs)
     {
+
         var tab = tabs[0];
-        console.log(tab);
+
+        var oPopup = {
+
+            /**
+             * @function vInitComplete
+             *
+             * @description Extension has been initialized
+             */
+
+            'vInitComplete' : function()
+            {
+                oPort.postMessage({
+                    'class'  : 'CDezemPopup',
+                    'method' : 'vInjectScript',
+                    'param'  : [
+                        tab.id,
+                        'popup/content.js'
+                    ]
+                });
+            }
+        };
+
+        oPort.onMessage.addListener(function(oMsg)
+        {
+            var sMethod = oMsg.method;
+            var amParam = oMsg.param;
+
+            if (oPopup[sMethod]) {
+
+                try {
+                    oPopup[sMethod].apply(oPopup, amParam);
+                }
+                catch (oError) {
+                    chrome.devtools.inspectedWindow.eval("console.log(" + JSON.stringify(oError.stack) + ")");
+                }
+            }
+        });
+
+        oPort.postMessage({
+            'class'  : 'CDezemPopup',
+            'method' : 'vInitTab',
+            'param'  : [tab.id]
+        });
 
         callback(tab.url);
     });
-}
-
-function getUser(url, callback, errorCallback)
-{
-    var asMatch = url.match(/(^https?:\/\/[^/]+)\/.*/)
-
-    if (asMatch.length) {
-        var searchUrl = asMatch[1] + '/services/tree/json.php';
-
-        console.log(searchUrl);
-
-        var x = new XMLHttpRequest();
-        x.open('POST', searchUrl);
-        x.responseType = 'json';
-        x.onload = function(oEvent)
-        {
-            callback(oEvent.currentTarget.response);
-        };
-        x.onerror = function()
-        {
-            errorCallback('Network error.');
-        };
-        x.send(JSON.stringify({
-            'class'     : 'User',
-            'method'    : 'oGetUser',
-            'parameter' : [null, 63],
-        }));
-    }
-}
-
-function renderStatus(statusText)
-{
-    document.getElementById('result').innerHTML = '<pre>' + statusText + '</pre>';
 }
 
 document.addEventListener('DOMContentLoaded', function()
 {
     getCurrentTabUrl(function(url)
     {
-        getUser(url,
-            function(oUser)
-            {
-                renderStatus(JSON.stringify(oUser, null, '    '));
-            },
-            function(errorMessage)
-            {
-                renderStatus('Cannot display image. ' + errorMessage);
-            }
-        );
+        console.log(url);
     });
 });
 
 var oPort = chrome.runtime.connect({
     'name' : 'popup'
-});
-oPort.postMessage('Hi BackGround');
-oPort.onMessage.addListener(function(sMsg) {
-    console.log('message recieved', sMsg);
 });

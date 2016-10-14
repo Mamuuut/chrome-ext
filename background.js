@@ -2,6 +2,33 @@
 
 var aoConnection = {};
 
+var oPopup = {
+
+    /**
+     * @function vInitTabConnection
+     *
+     * @description Initialize the tab connection to the dev tool panel
+     *
+     * @param {Object} oPort
+     *
+     * @param {Integer} iTab
+     */
+
+    'vInitTab' : function(oPort, iTabId) {
+
+        // Keep the relation between port and tab id
+        aoConnection[iTabId] = oPort;
+
+        oPort.postMessage({
+            'class'  : 'CDezemPopup',
+            'method' : 'vInitComplete',
+            'param'  : null
+        });
+
+        return;
+    },
+};
+
 var oPanel = {
 
     /**
@@ -55,6 +82,70 @@ var oPanel = {
     }
 }
 
+var onConnect = function(oDestObject)
+{
+    return function(oPort)
+    {
+        var extensionListener = function(oMsg)
+        {
+            var sMethod = oMsg.method;
+            var amParam = oMsg.param;
+
+            amParam.unshift(oPort);
+
+            if (oDestObject[sMethod]) {
+                oDestObject[sMethod].apply(oPanel, amParam);
+            }
+        };
+
+        oPort.onMessage.addListener(extensionListener);
+
+        oPort.onDisconnect.addListener(function(oPort)
+        {
+            console.log('onDisconnect.');
+
+            oPort.onMessage.removeListener(extensionListener);
+
+            var aiTabs = Object.keys(aoConnection);
+
+            for (var i = 0, len = aiTabs.length; i < len; i++) {
+
+                var iTabId = aiTabs[i]
+
+                if (aoConnection[iTabId] == oPort) {
+                    delete aoConnection[iTabId]
+                    break;
+                }
+            }
+        });
+    };
+}
+
+var aoOnPortConnect = {
+
+    /**
+     * @function popup
+     *
+     * @description popup connected
+     *
+     * @param {Object} oPort
+     */
+
+    'popup' : onConnect(oPopup),
+
+    /**
+     * @function dev_panel
+     *
+     * @description dev_panel connected
+     *
+     * @param {Object} oPort
+     */
+
+    'dev_panel' : onConnect(oPanel)
+
+}
+
+
 // Extension installed
 
 chrome.runtime.onInstalled.addListener(function()
@@ -90,38 +181,9 @@ chrome.runtime.onConnect.addListener(function(oPort)
 {
     console.log('onConnect', oPort);
 
-    var extensionListener = function(oMsg)
-    {
-        var sMethod = oMsg.method;
-        var amParam = oMsg.param;
-
-        amParam.unshift(oPort);
-
-        if (oPanel[sMethod]) {
-            oPanel[sMethod].apply(oPanel, amParam);
-        }
-    };
-
-    oPort.onMessage.addListener(extensionListener);
-
-    oPort.onDisconnect.addListener(function(oPort)
-    {
-        console.log('onDisconnect.');
-
-        oPort.onMessage.removeListener(extensionListener);
-
-        var aiTabs = Object.keys(aoConnection);
-
-        for (var i = 0, len = aiTabs.length; i < len; i++) {
-
-            var iTabId = aiTabs[i]
-
-            if (aoConnection[iTabId] == oPort) {
-                delete aoConnection[iTabId]
-                break;
-            }
-        }
-    });
+    if (aoOnPortConnect[oPort.name]) {
+        aoOnPortConnect[oPort.name](oPort);
+    }
 });
 
 

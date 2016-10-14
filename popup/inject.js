@@ -1,7 +1,30 @@
-console.log("TEST", dezem.model.CUserRpc.oGetCurrentUser());
+require([
+    'dezem/language/CLang',
+    'can/construct'
+], function(CLang)
+{
 
-var extensionID = 'mclhkfjceicnebhelmabijdakhgkcdhn';
+    window.CInjectPopup = can.Construct.extend(
+        {
 
-chrome.runtime.sendMessage(extensionID, {dezem: true}, function(response) {
-    console.log(response);
+            /**
+             * @function vPostStatus
+             *
+             * @param {String}
+             */
+
+            'vPostStatus' : function(sStatus)
+            {
+                console.log(sStatus);
+                window.postMessage({
+                    'class'  : 'CDezemPopup',
+                    'method' : 'vSetStatus',
+                    'param'  : [sStatus]
+                }, '*');
+            }
+        },
+        {
+
+        }
+    );
 });

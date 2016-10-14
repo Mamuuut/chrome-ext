@@ -1,3 +1,8 @@
+var asClass = [
+    'CDezemDevTools',
+    'CDezemPopup'
+]
+
 window.addEventListener('message', function(oEvent)
 {
     // Only accept messages from the same frame
@@ -9,7 +14,7 @@ window.addEventListener('message', function(oEvent)
 
     // Only accept messages that we know are ours
     if (typeof message !== 'object' || message === null ||
-        !message.class === 'CDezemDevTools') {
+        asClass.indexOf(message.class) === -1) {
         return;
     }
 
