@@ -11,8 +11,9 @@ var oPort = chrome.runtime.connect({
 });
 
 oPort.postMessage({
-    'init'  : true,
-    'tabId' : chrome.devtools.inspectedWindow.tabId
+    'class'  : 'CDezemDevTools',
+    'method' : 'vInitTab',
+    'param'  : [chrome.devtools.inspectedWindow.tabId]
 });
 
 chrome.devtools.panels.elements.onSelectionChanged.addListener(function()
@@ -23,11 +24,18 @@ chrome.devtools.panels.elements.onSelectionChanged.addListener(function()
 var oPanel = {
 
     /**
-     * @property {Array_ao}
+     * @property {Array_aso}
      * @description List of Module Group by group name
      */
 
     'asoModuleGroup' : {},
+
+    /**
+     * @property {Array_aso}
+     * @description List of Module changes by group name
+     */
+
+    'asoChanges' : {},
 
     /**
      * @property {Array_asel}
@@ -110,7 +118,24 @@ var oPanel = {
         }
 
         var sFlag = asFLAG_LOCALE[sLocale];
-        elLine.append('<dd><span class="flag-icon flag-icon-' + sFlag + '" /><input data-locale="' + sLocale + '" type="text"/></dd>');
+        var elDD = $('<dd><span class="flag-icon flag-icon-' + sFlag + '" /><input data-locale="' + sLocale + '" type="text"/></dd>');
+
+        elDD.find('input').on('blur', function(oEvent)
+        {
+            var sNewValue = $(oEvent.target).val();
+            var bChanged = sNewValue !== sValue;
+
+            if (bChanged) {
+                _.set(this.asoChanges, [sGroup, sKey], bChanged);
+            }
+            else {
+                _.unset(this.asoChanges, [sGroup, sKey]);
+            }
+
+            elModule.closest('.module').toggleClass('highlighted', _.size(this.asoChanges[sGroup]) > 0);
+        }.bind(this));
+
+        elLine.append(elDD);
         elLine.find('input').last().val(sValue);
     },
 
@@ -182,12 +207,25 @@ var oPanel = {
 
     'vInitComplete' : function()
     {
-        this.vSetStatus('Loading language modules…');
-
         oPort.postMessage({
-            'tabId'          : chrome.devtools.inspectedWindow.tabId,
-            'scriptToInject' : 'devtools/content.js'
+            'class'  : 'CDezemDevTools',
+            'method' : 'vInjectScript',
+            'param'  : [
+                chrome.devtools.inspectedWindow.tabId,
+                'devtools/content.js'
+            ]
         });
+    },
+
+    /**
+     * @function vRefreshPage
+     *
+     * @description Page has been reloaded
+     */
+
+    'vRefreshPage' : function()
+    {
+        this.vInitComplete();
     },
 
 
@@ -219,7 +257,9 @@ var oPanel = {
     {
         var elModule = this.asoModuleGroup[sGroup][0].elModule;
 
+        elModule.find('input').off('blur');
         elModule.find('dl').remove();
+
         _.forIn(asoLocaleKeyValues.en_GB, function(sValue, sKey)
         {
             _.unset(this.aselLine, [sGroup, sKey]);
@@ -297,6 +337,37 @@ var oPanel = {
         $('#content').hide();
     },
 
+
+    /**
+     * @function vUploadSuccess
+     *
+     * @description File upload was successfull
+     *
+     * @param {String} sGroup
+     */
+
+    'vUploadSuccess' : function(sGroup)
+    {
+        var elGroup = this.asoModuleGroup[sGroup][0].elModule.closest('.module');
+        elGroup.removeClass('highlighted');
+    },
+
+
+    /**
+     * @function vUploadSuccess
+     *
+     * @description File upload was successfull
+     *
+     * @param {String} sGroup
+     */
+
+    'vDownloadSuccess' : function(sGroup)
+    {
+        var elGroup = this.asoModuleGroup[sGroup][0].elModule.closest('.module');
+        elGroup.removeClass('highlighted');
+    },
+
+
     /**
      * @function vRenderModuleGroups
      *
@@ -308,7 +379,14 @@ var oPanel = {
     'vRenderModuleGroups' : function(asoModuleGroup)
     {
         this.vSetStatus('');
+
         $('#content').empty();
+        $('.pick').toggleClass('active', false);
+
+        this.asoModuleGroup = {};
+        this.asoChanges     = {};
+        this.aselLine       = {};
+        this.bPickMode      = false;
 
         this.asoModuleGroup = asoModuleGroup;
 

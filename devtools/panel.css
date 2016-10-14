@@ -51,10 +51,6 @@
     bottom   : 0;
 }
 
-.module {
-    margin-bottom : 1px;
-}
-
 .module-title {
     display          : table;
     table-layout     : fixed;
@@ -65,7 +61,8 @@
     background-color : #666;
     color            : #fff;
     cursor           : pointer;
-    padding          : 1px 0 1px 5px
+    padding          : 1px 0 1px 5px;
+    border-bottom    : 1px solid #ccc;
 }
 
 .module-title > * {
@@ -102,6 +99,14 @@
 
 .module-title + .module-title {
     margin-top : -1px;
+}
+
+.module.highlighted .module-title {
+    background-color : #f09000;
+}
+
+.module.highlighted .module-title:hover {
+    color : #fff;
 }
 
 .module-content {

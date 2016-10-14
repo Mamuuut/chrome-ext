@@ -1,6 +1,5 @@
 require([
     'dezem/language/CLang',
-    'can/view/live',
     'https://apis.google.com/js/api.js'
 ], function(CLang)
 {
@@ -53,11 +52,13 @@ require([
 
                     var sText = oEvent.target.value || oEvent.target.innerText;
 
-                    window.postMessage({
-                        'class'  : 'CDezemDevTools',
-                        'method' : 'vSetSearchText',
-                        'param'  : [sText.trim()]
-                    }, '*');
+                    if (sText) {
+                        window.postMessage({
+                            'class'  : 'CDezemDevTools',
+                            'method' : 'vSetSearchText',
+                            'param'  : [sText.trim()]
+                        }, '*');
+                    }
                 }
             },
 
@@ -148,6 +149,8 @@ require([
 
             'vLoadModule' : function()
             {
+                this.vPostStatus('Loading language modules…');
+
                 var asModule = _.keys(requirejs.s.contexts._.defined);
                 var asLanguageModule = _.filter(asModule, function(sModule)
                 {
@@ -397,25 +400,12 @@ require([
                     }
                 }
 
+                CLang.bMergeProperties = true;
                 var oLang = new CLang();
-
-                // Hook live text method to blink updated elements
-                var text = can.view.live.text;
-                can.view.live.text = function (el, compute, parentNode, nodeList) {
-                    text.call(can.view.live, el, compute, parentNode, nodeList);
-                    compute.computeInstance.bind('change', function(ev, newVal, oldVal) {
-                        $(parentNode).fadeOut(function()
-                        {
-                            $(parentNode).fadeIn();
-                        });
-                    });
-                };
 
                 // Update language entries
                 oLang.vCopyLangObserveValues(oLangDef[oLang.sGetLocale()]);
-
-                // Restore live text method
-                can.view.live.text = text;
+                oLang.vUpdateLocale();
 
                 window.postMessage({
                     'class'  : 'CDezemDevTools',
@@ -443,6 +433,19 @@ require([
                     {
                         this.vSetLangValuesFromSpreadsheet(sGroup, oResponse.result.values);
                     }.bind(this))
+                    .then(function()
+                    {
+                        window.postMessage({
+                            'class'  : 'CDezemDevTools',
+                            'method' : 'vDownloadSuccess',
+                            'param'  : [sGroup]
+                        }, '*');
+
+                        return new Promise(function(resolve, reject)
+                        {
+                            resolve();
+                        }.bind(this));
+                    })
                     .then(this.vPostStatus.bind(this, ''))
                     .catch(function(sError)
                     {
@@ -623,6 +626,19 @@ require([
                             'values'           : aasValues
                         });
                     }.bind(this))
+                    .then(function()
+                    {
+                        window.postMessage({
+                            'class'  : 'CDezemDevTools',
+                            'method' : 'vUploadSuccess',
+                            'param'  : [sGroup]
+                        }, '*');
+
+                        return new Promise(function(resolve, reject)
+                        {
+                            resolve();
+                        }.bind(this));
+                    })
                     .then(this.vPostStatus.bind(this, ''))
                     .catch(function(sError)
                     {
