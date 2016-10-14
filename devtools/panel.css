@@ -240,15 +240,37 @@ input {
     margin : 5px;
 }
 
+.diff-version {
+    position    : relative;
+    padding     : 10px 0 0;
+    line-height : 20px;
+}
+
+.diff-version span {
+    color      : #999;
+    font-size  : 10px;
+    font-style : italic;
+    left       : 0;
+    position   : absolute;
+    top        : -5px;
+}
+
+.diff-webpage {
+    color         : #999;
+    margin        : 5px;
+}
+
 .diff-local {
     color         : #3c763d;
     margin        : 5px;
     border-bottom : 1px solid #ddd;
+    font-weight   : bold;
 }
 
 .diff-remote {
     color  : #a94442;
     margin : 5px;
+    border-bottom : 1px solid #ddd;
 }
 
 

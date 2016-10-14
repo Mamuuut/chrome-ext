@@ -55,87 +55,6 @@ var oPanel = {
     }
 }
 
-var aoOnPortConnect = {
-
-    /**
-     * @function popup
-     *
-     * @description popup connected
-     *
-     * @param {Object} oPort
-     */
-
-    'popup' : function(oPort)
-    {
-        oPort.onMessage.addListener(function(sMsg) {
-            console.log('message recieved', sMsg);
-            oPort.postMessage('Hi Popup.js');
-        });
-
-        chrome.tabs.executeScript(
-            tab.id,
-            {
-                'file' : 'popup/content.js'
-            },
-            function(aoResult)
-            {
-                if (chrome.runtime.lastError) {
-                    console.error(chrome.runtime.lastError.message);
-                }
-                else {
-                    console.log('content script exectued.');
-                }
-            }
-        );
-    },
-
-    /**
-     * @function dev_panel
-     *
-     * @description dev_panel connected
-     *
-     * @param {Object} oPort
-     */
-
-    'dev_panel' : function(oPort)
-    {
-        var extensionListener = function(oMsg)
-        {
-            var sMethod = oMsg.method;
-            var amParam = oMsg.param;
-
-            amParam.unshift(oPort);
-
-            if (oPanel[sMethod]) {
-                oPanel[sMethod].apply(oPanel, amParam);
-            }
-        };
-
-        oPort.onMessage.addListener(extensionListener);
-
-        oPort.onDisconnect.addListener(function(oPort)
-        {
-            console.log('onDisconnect.');
-
-            oPort.onMessage.removeListener(extensionListener);
-
-            var aiTabs = Object.keys(aoConnection);
-
-            for (var i = 0, len = aiTabs.length; i < len; i++) {
-
-                var iTabId = aiTabs[i]
-
-                if (aoConnection[iTabId] == oPort) {
-                    delete aoConnection[iTabId]
-                    break;
-                }
-            }
-        });
-    }
-
-}
-
-
 // Extension installed
 
 chrome.runtime.onInstalled.addListener(function()
@@ -171,9 +90,38 @@ chrome.runtime.onConnect.addListener(function(oPort)
 {
     console.log('onConnect', oPort);
 
-    if (aoOnPortConnect[oPort.name]) {
-        aoOnPortConnect[oPort.name](oPort);
-    }
+    var extensionListener = function(oMsg)
+    {
+        var sMethod = oMsg.method;
+        var amParam = oMsg.param;
+
+        amParam.unshift(oPort);
+
+        if (oPanel[sMethod]) {
+            oPanel[sMethod].apply(oPanel, amParam);
+        }
+    };
+
+    oPort.onMessage.addListener(extensionListener);
+
+    oPort.onDisconnect.addListener(function(oPort)
+    {
+        console.log('onDisconnect.');
+
+        oPort.onMessage.removeListener(extensionListener);
+
+        var aiTabs = Object.keys(aoConnection);
+
+        for (var i = 0, len = aiTabs.length; i < len; i++) {
+
+            var iTabId = aiTabs[i]
+
+            if (aoConnection[iTabId] == oPort) {
+                delete aoConnection[iTabId]
+                break;
+            }
+        }
+    });
 });
 
 

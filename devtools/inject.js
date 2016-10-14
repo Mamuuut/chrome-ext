@@ -513,16 +513,19 @@ require([
 
                     _.forEach(asLocale, function(sLocale)
                     {
+                        var sRemoteValue = '';
+                        if (asRemoteValues) {
+                            var iRemoteIndex = _.indexOf(aasRemoteValues[0], sLocale);
+                            sRemoteValue = asRemoteValues[iRemoteIndex] || '';
+                        }
+
                         var sLocalValue = '';
                         if (asLocalValues) {
                             var iLocalIndex = _.indexOf(aasLocalValues[0], sLocale);
                             sLocalValue = asLocalValues[iLocalIndex] || '';
                         }
-
-                        var sRemoteValue = '';
-                        if (asRemoteValues) {
-                            var iRemoteIndex = _.indexOf(aasRemoteValues[0], sLocale);
-                            sRemoteValue = asRemoteValues[iRemoteIndex] || '';
+                        else {
+                            sLocalValue = sRemoteValue;
                         }
 
                         if (sRemoteValue !== sLocalValue) {
@@ -580,8 +583,6 @@ require([
                     }.bind(this))
                     .then(function(oResponse)
                     {
-                        this.vSetLangValuesFromSpreadsheet(sGroup, aasValues);
-
                         var oMergedValue = this.oGetMergedValues(aasValues, oResponse.result.values);
 
                         window.postMessage({
@@ -611,6 +612,8 @@ require([
             'vUploadSpreadSheet' : function(sGroup, aasValues)
             {
                 this.vPostStatus('Uploading to spreadsheet…');
+
+                this.vSetLangValuesFromSpreadsheet(sGroup, aasValues);
 
                 var sQuery = 'properties has {key="dezem-path" and value="' + this.sGetRepPath(sGroup) + '"}';
 

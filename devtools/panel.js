@@ -16,10 +16,10 @@ oPort.postMessage({
     'param'  : [chrome.devtools.inspectedWindow.tabId]
 });
 
-chrome.devtools.panels.elements.onSelectionChanged.addListener(function()
-{
-    chrome.devtools.inspectedWindow.eval('window.CInjectController.vSetSelectedElement($0)');
-});
+// chrome.devtools.panels.elements.onSelectionChanged.addListener(function()
+// {
+//     chrome.devtools.inspectedWindow.eval('window.CInjectController.vSetSelectedElement($0)');
+// });
 
 var oPanel = {
 
@@ -126,7 +126,7 @@ var oPanel = {
             var bChanged = sNewValue !== sValue;
 
             if (bChanged) {
-                _.set(this.asoChanges, [sGroup, sKey], bChanged);
+                _.set(this.asoChanges, [sGroup, sKey], sNewValue);
             }
             else {
                 _.unset(this.asoChanges, [sGroup, sKey]);
@@ -306,11 +306,15 @@ var oPanel = {
 
             elDiff.append(elTitle);
 
-            elDiff.append('<div class="diff-local">' + (oDiff.sLocalValue || '[NO VALUE]') + '</div>');
-            elDiff.append('<div class="diff-remote">' + (oDiff.sRemoteValue || '[NO VALUE]') + '</div>');
+            var oModule        = _.find(this.asoModuleGroup[sGroup], {'sLocale' : oDiff.sLocale})
+            var sLocalOldValue = oModule && oModule[oDiff.sKey];
+
+            elDiff.append('<div class="diff-version diff-local"><span>Edited (new version to be uploaded to google drive)</span>' + (oDiff.sLocalValue || '[NO VALUE]') + '</div>');
+            elDiff.append('<div class="diff-version diff-remote"><span>Google (previous version in google drive)</span>' + (oDiff.sRemoteValue || '[NO VALUE]') + '</div>');
+            elDiff.append('<div class="diff-version diff-webpage"><span>Webpage (previous version in the web application)</span>' + (sLocalOldValue || '[NO VALUE]') + '</div>');
 
             $('#diff').append(elDiff);
-        });
+        }.bind(this));
 
         var elHeader = $('<div class="diff-header" />');
         elHeader.append('<span>' + oMergedValue.aoDiff.length + ' change(s).</span>');
@@ -383,12 +387,10 @@ var oPanel = {
         $('#content').empty();
         $('.pick').toggleClass('active', false);
 
-        this.asoModuleGroup = {};
+        this.asoModuleGroup = asoModuleGroup;
         this.asoChanges     = {};
         this.aselLine       = {};
         this.bPickMode      = false;
-
-        this.asoModuleGroup = asoModuleGroup;
 
         _.forIn(asoModuleGroup, function(aoModule, sGroup)
         {
@@ -451,9 +453,9 @@ var oPanel = {
         $('#content').find('.upload').click(function(oEvent)
         {
             var elModuleContent = $(oEvent.target).closest('.module').find('.module-content');
-            var aoModule = elModuleContent.data('aoModule');
-            var sGroup   = elModuleContent.data('sGroup');
-            var asKeys   = _.union.apply(_, _.map(_.map(aoModule, 'oKeyValues'), _.keys));
+            var aoModule  = elModuleContent.data('aoModule');
+            var sGroup    = elModuleContent.data('sGroup');
+            var asKeys    = _.keys(this.asoChanges[sGroup]);
             var assValues = _.map(asKeys, function(sKey)
             {
                 return [sKey];
@@ -483,7 +485,13 @@ oPort.onMessage.addListener(function(oMsg)
     var amParam = oMsg.param;
 
     if (oPanel[sMethod]) {
-        oPanel[sMethod].apply(oPanel, amParam);
+
+        try {
+            oPanel[sMethod].apply(oPanel, amParam);
+        }
+        catch (oError) {
+            chrome.devtools.inspectedWindow.eval("console.log(" + JSON.stringify(oError.stack) + ")");
+        }
     }
 });
 
