@@ -1,5 +1,3 @@
-console.log('Injecting devtools script…');
-
 var vInjectScript = function()
 {
     var elLoading = document.getElementById('loader_container');
@@ -13,8 +11,6 @@ var vInjectScript = function()
         setTimeout(vInjectScript, 100)
     }
     else {
-        console.log('Injected devtools script.');
-
         elScript = document.createElement('script');
 
         elScript.id   = 'devtools_inject';

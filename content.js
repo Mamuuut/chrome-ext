@@ -5,6 +5,8 @@ var asClass = [
 
 window.addEventListener('message', function(oEvent)
 {
+    console.log(oEvent);
+    
     // Only accept messages from the same frame
     if (oEvent.source !== window) {
         return;

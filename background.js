@@ -2,33 +2,6 @@
 
 var aoConnection = {};
 
-var oPopup = {
-
-    /**
-     * @function vInitTabConnection
-     *
-     * @description Initialize the tab connection to the dev tool panel
-     *
-     * @param {Object} oPort
-     *
-     * @param {Integer} iTab
-     */
-
-    'vInitTab' : function(oPort, iTabId) {
-
-        // Keep the relation between port and tab id
-        aoConnection[iTabId] = oPort;
-
-        oPort.postMessage({
-            'class'  : 'CDezemPopup',
-            'method' : 'vInitComplete',
-            'param'  : null
-        });
-
-        return;
-    },
-};
-
 var oPanel = {
 
     /**
@@ -88,6 +61,8 @@ var onConnect = function(oDestObject)
     {
         var extensionListener = function(oMsg)
         {
+            console.log(oMsg);
+
             var sMethod = oMsg.method;
             var amParam = oMsg.param;
 
@@ -122,16 +97,6 @@ var onConnect = function(oDestObject)
 }
 
 var aoOnPortConnect = {
-
-    /**
-     * @function popup
-     *
-     * @description popup connected
-     *
-     * @param {Object} oPort
-     */
-
-    'popup' : onConnect(oPopup),
 
     /**
      * @function dev_panel
@@ -214,6 +179,9 @@ chrome.runtime.onMessage.addListener(function(oRequest, oSender, sendResponse)
         var iTabId = oSender.tab.id;
 
         if (iTabId in aoConnection) {
+            
+            console.log('runtime onMessage', iTabId, oRequest);
+
             aoConnection[iTabId].postMessage(oRequest);
         }
         else {

@@ -14,13 +14,6 @@
         "128": "img/icon128.png"
     },
     "devtools_page" : "devtools/devtools.html",
-    "page_action": {
-        "default_icon": {
-            "19": "img/icon19.png",
-            "38": "img/icon38.png"
-        },
-        "default_popup": "popup/popup.html"
-    },
     "permissions": [
         "activeTab",
         "declarativeContent",
@@ -30,7 +23,8 @@
     ],
     "web_accessible_resources": [
         "devtools/inject.js",
-        "popup/inject.js"
+        "sandbox/inject.js",
+        "sandbox/jDBSCAN.js"
     ],
     "externally_connectable": {
         "matches": [
@@ -44,7 +38,11 @@
                 "*://*.dezem.de/*",
                 "*://localhost/*"
             ],
-            "js": ["content.js"]
+            "css": ["sandbox/content.css"],
+            "js": [
+                "content.js",
+                "sandbox/content.js"
+            ]
         }
     ],
     "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'"

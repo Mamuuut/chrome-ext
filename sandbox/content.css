@@ -1,0 +1,9 @@
+#sandbox {
+    width: 20px;
+    font-size: 16px;
+}
+
+.amcharts-graph-bullet.bold-bullet {
+    stroke-width: 0;
+    r: 4;
+}
