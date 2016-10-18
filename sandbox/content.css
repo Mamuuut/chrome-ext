@@ -7,3 +7,26 @@
     stroke-width: 0;
     r: 4;
 }
+
+li .params {
+    display : none;
+}
+
+li .params div {
+    padding : 2px 5px;
+}
+
+li .params .name {
+    font-weight : bold;
+}
+
+li .params div input {
+    width         : 100%;
+    border        : 1px solid #ccc;
+    border-radius : 4px;
+    padding       : 2px 5px;
+}
+
+li.active .params {
+    display : block;
+}

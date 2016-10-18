@@ -24,7 +24,8 @@
     "web_accessible_resources": [
         "devtools/inject.js",
         "sandbox/inject.js",
-        "sandbox/jDBSCAN.js"
+        "sandbox/jDBSCAN.js",
+        "sandbox/dbscan.js"
     ],
     "externally_connectable": {
         "matches": [

@@ -1,3 +1,14 @@
+var vAppendScript = function(sScript, sId)
+{
+        var elScript      = document.createElement('script');
+        var elFirstScript = document.getElementsByTagName('script')[0];
+
+        elScript.id   = sId;
+        elScript.type = 'text/javascript';
+        elScript.src  = chrome.extension.getURL(sScript);
+        elFirstScript.parentNode.insertBefore(elScript, elFirstScript);
+}
+
 var vInjectScript = function()
 {
     var elLoading = document.getElementById('loader_container');
@@ -11,18 +22,9 @@ var vInjectScript = function()
         setTimeout(vInjectScript, 100)
     }
     else {
-        elFirstScript = document.getElementsByTagName('script')[0];
-
-        elScriptDb = document.createElement('script');
-        elScriptDb.type = 'text/javascript';
-        elScriptDb.src  = chrome.extension.getURL('sandbox/jDBSCAN.js');
-        elFirstScript.parentNode.insertBefore(elScriptDb, elFirstScript);
-
-        elScript = document.createElement('script');
-        elScript.id   = 'sandbox_inject';
-        elScript.type = 'text/javascript';
-        elScript.src  = chrome.extension.getURL('sandbox/inject.js');
-        elFirstScript.parentNode.insertBefore(elScript, elFirstScript);
+        vAppendScript('sandbox/inject.js', 'sandbox_inject');
+        vAppendScript('sandbox/jDBSCAN.js');
+        vAppendScript('sandbox/dbscan.js');
     }
 }
 
