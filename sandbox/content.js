@@ -6,7 +6,10 @@ var vAppendScript = function(sScript, sId)
         elScript.id   = sId;
         elScript.type = 'text/javascript';
         elScript.src  = chrome.extension.getURL(sScript);
-        elFirstScript.parentNode.insertBefore(elScript, elFirstScript);
+
+        if (elFirstScript) {
+            elFirstScript.parentNode.insertBefore(elScript, elFirstScript);
+        }
 }
 
 var vInjectScript = function()

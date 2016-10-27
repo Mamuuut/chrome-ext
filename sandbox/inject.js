@@ -1,4 +1,4 @@
-if (window.require && window.dezem) {
+if (window.require && window.dezem && $('personal-settings-comp').length > 0) {
 
     require([
         'widgets/chart/controller/CChart',

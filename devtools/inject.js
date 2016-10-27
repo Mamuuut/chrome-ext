@@ -1,3 +1,8 @@
+// TODO:
+// - Pick text inside popup
+// - Pick text inside table header with ? icon
+// - Deactivate picking and typing in search input
+
 if (window.require && window.dezem) {
     require([
         'dezem/language/CLang',
