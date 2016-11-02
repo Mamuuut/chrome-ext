@@ -2,6 +2,7 @@ var asFLAG_LOCALE = {
     'de_DE' : 'de',
     'en_GB' : 'gb',
     'es_ES' : 'es',
+    'fr_FR' : 'fr',
     'ru_RU' : 'ru'
 };
 

@@ -15,6 +15,8 @@ if (window.require && window.dezem) {
             "https://www.googleapis.com/auth/drive"
         ];
 
+        var sRange = 'Sheet1!A1:Z1000';
+
         var aoFileCache = {};
 
         window.CInjectController = can.Construct.extend(
@@ -356,7 +358,7 @@ if (window.require && window.dezem) {
                         this.vPostStatus('Getting spreadsheet…');
                         return gapi.client.sheets.spreadsheets.values.get({
                             'spreadsheetId' : oResponse.result.files[0].id,
-                            'range'         : 'Sheet1!A1:E1000'
+                            'range'         : sRange
                         });
                     }
                     else {
@@ -630,7 +632,7 @@ if (window.require && window.dezem) {
                             this.vPostStatus('Uploading spreadsheet…');
                             return gapi.client.sheets.spreadsheets.values.update({
                                 'spreadsheetId'    : oResponse.result.files[0].id,
-                                'range'            : 'Sheet1!A1:E1000',
+                                'range'            : sRange,
                                 'valueInputOption' : 'RAW',
                                 'values'           : aasValues
                             });
