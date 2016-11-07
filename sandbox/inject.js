@@ -1,6 +1,9 @@
+window.bDEBUG_MODE = true;
+
 if (window.require && window.dezem && $('personal-settings-comp').length > 0) {
 
     require([
+        'dezem/controller/CDebugMode',
         'widgets/chart/controller/CChart',
         'can/component',
         'can/view/stache'

@@ -28,6 +28,7 @@ var vInjectScript = function()
         vAppendScript('sandbox/inject.js', 'sandbox_inject');
         vAppendScript('sandbox/jDBSCAN.js');
         vAppendScript('sandbox/dbscan.js');
+        vAppendScript('sandbox/fixture.js');
     }
 }
 

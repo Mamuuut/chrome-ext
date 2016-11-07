@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "deZem Extension",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "background": {
         "scripts": [
             "background.js"
@@ -23,9 +23,7 @@
     ],
     "web_accessible_resources": [
         "devtools/inject.js",
-        "sandbox/inject.js",
-        "sandbox/jDBSCAN.js",
-        "sandbox/dbscan.js"
+        "sandbox/*.js"
     ],
     "externally_connectable": {
         "matches": [
@@ -39,10 +37,8 @@
                 "*://*.dezem.de/*",
                 "*://localhost/*"
             ],
-            "css": ["sandbox/content.css"],
             "js": [
-                "content.js",
-                "sandbox/content.js"
+                "content.js"
             ]
         }
     ],

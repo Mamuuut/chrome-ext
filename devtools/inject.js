@@ -1,6 +1,4 @@
 // TODO:
-// - Pick text inside popup
-// - Pick text inside table header with ? icon
 // - Deactivate picking and typing in search input
 
 if (window.require && window.dezem) {
@@ -48,19 +46,20 @@ if (window.require && window.dezem) {
 
                 'vOnMouseMove' : function(oEvent)
                 {
-                    if (oEvent.target.getAttribute('id') !== 'pick-hover' && oEvent.target.children.length === 0) {
-
-                        var oRect = oEvent.target.getBoundingClientRect()
-                        this.elPickHover.css({
-                            'top'    : oRect.top + 'px',
-                            'left'   : oRect.left + 'px',
-                            'width'  : oRect.width + 'px',
-                            'height' : oRect.height + 'px'
-                        });
+                    if (oEvent.target.getAttribute('id') !== 'pick-hover' && $(oEvent.target).children(':not(img)').length === 0) {
 
                         var sText = oEvent.target.value || oEvent.target.innerText;
 
                         if (sText) {
+
+                            var oRect = oEvent.target.getBoundingClientRect()
+                            this.elPickHover.css({
+                                'top'    : oRect.top + 'px',
+                                'left'   : oRect.left + 'px',
+                                'width'  : oRect.width + 'px',
+                                'height' : oRect.height + 'px'
+                            });
+
                             window.postMessage({
                                 'class'  : 'CDezemDevTools',
                                 'method' : 'vSetSearchText',

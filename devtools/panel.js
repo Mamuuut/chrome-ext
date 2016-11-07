@@ -148,9 +148,11 @@ var oPanel = {
      * @param {String} sText
      *
      * @param {Boolean} bForce
+     *
+     * @param {Boolean} bNoInputUpdate
      */
 
-    'vSetSearchText' : function(sText, bForce)
+    'vSetSearchText' : function(sText, bForce, bNoInputUpdate)
     {
         if (!bForce && sText === $('.search-input').val()) {
             return;
@@ -158,7 +160,9 @@ var oPanel = {
 
         if (sText && sText.length > 2) {
 
-            $('.search-input').val(sText);
+            if (!bNoInputUpdate) {
+                $('.search-input').val(sText);
+            }
 
             $('#content').find('.module, .module-content, .line').hide();
             _.forIn(this.asoModuleGroup, function(aoModule, sGroup)
@@ -308,7 +312,7 @@ var oPanel = {
             elDiff.append(elTitle);
 
             var oModule        = _.find(this.asoModuleGroup[sGroup], {'sLocale' : oDiff.sLocale})
-            var sLocalOldValue = oModule && oModule[oDiff.sKey];
+            var sLocalOldValue = oModule && oModule.oKeyValues[oDiff.sKey];
 
             elDiff.append('<div class="diff-version diff-local"><span>Edited (new version to be uploaded to google drive)</span>' + (oDiff.sLocalValue || '[NO VALUE]') + '</div>');
             elDiff.append('<div class="diff-version diff-remote"><span>Google (previous version in google drive)</span>' + (oDiff.sRemoteValue || '[NO VALUE]') + '</div>');
@@ -464,14 +468,21 @@ var oPanel = {
 
             assValues.unshift(['Keys']);
 
-            _.forEach(aoModule, function(oModule)
+            elModuleContent.find('dl').first().find('input[data-locale]').each(function()
             {
-                assValues[0].push(oModule.sLocale);
-                _.forEach(asKeys, function(sKey, iIndex)
+                assValues[0].push($(this).data('locale'));
+            });
+
+            _.forEach(asKeys, function(sKey, iIndex)
+            {
+                var elInput = _.get(this.aselLine, [sGroup, sKey]).find('input[data-locale]');
+
+                elInput.each(function()
                 {
-                    var sValue = _.get(this.aselLine, [sGroup, sKey]).find('input[data-locale=' + oModule.sLocale + ']').val();
+                    var sValue = $(this).val();
                     assValues[iIndex + 1].push(JSON.stringify(sValue));
-                }.bind(this));
+                });
+
             }.bind(this));
 
             this.vEvalScript('vCheckLocalRemoteDiff', [JSON.stringify(sGroup), JSON.stringify(assValues)]);
@@ -502,6 +513,11 @@ $('.clear-filter').click(function(oEvent)
     $('#content').find('.module-content').hide();
 });
 
+$('.download-all').click(function(oEvent)
+{
+    $('#content').find('.download').click();
+});
+
 $('.pick').click(function(oEvent)
 {
     oPanel.vTogglePickMode();
@@ -509,8 +525,11 @@ $('.pick').click(function(oEvent)
 
 $('.search-input').keyup(function(oEvent)
 {
+    if (oPanel.bPickMode) {
+        oPanel.vTogglePickMode();
+    }
     var sText = $('.search-input').val();
-    oPanel.vSetSearchText(sText, true);
+    oPanel.vSetSearchText(sText, true, true);
 });
 
 oPanel.vSetStatus('Connecting to deZem application…');
