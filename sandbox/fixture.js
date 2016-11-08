@@ -16,16 +16,24 @@ require([sJsonRpcModule,
 
         var sTemplate = can.stache(
             '<ul class="fixture-list dropdown-menu">' +
+                '<li class="filter">' +
+                    '<input type="test" placeholder="Filter">' +
+                    '<span class="clear-filter glyphicon glyphicon-remove" aria-hidden="true"></span>' +
+                '</li>' +
                 '{{#each aoFixture}}' +
-                    '<li {{data "oFixture" .}} >' +
-                        '<a>{{sUri}}</a>' +
-                        '<div class="fixture-request">' +
-                            '<pre>{{oRequest}}</pre>' +
-                        '</div>' +
-                        '<div class="fixture-response">' +
-                            '<pre>{{oResponse}}</pre>' +
-                        '</div>' +
-                    '</li>' +
+                    '{{#bFiltered .}}' +
+                        '<li class="fixture" {{data "oFixture" .}} >' +
+                            '<a><span class="bold">{{sUri}}</span><span>{{sClass}}</span><span class="bold">{{sMethod}}</span><span>{{sParam}}</span></a>' +
+                            '<div class="fixture-content">' +
+                                '<div class="fixture-request">' +
+                                    '<pre>{{sRequest}}</pre>' +
+                                '</div>' +
+                                '<div class="fixture-response">' +
+                                    '<pre>{{sResponse}}</pre>' +
+                                '</div>' +
+                            '</div>' +
+                        '</li>' +
+                    '{{/bFiltered}}' +
                 '{{/each}}' +
             '</ul>'
         );
@@ -34,20 +42,56 @@ require([sJsonRpcModule,
             'tag'       : 'fixture-list',
             'template'  : sTemplate,
             'viewModel' : {
-                'aoFixture' : aoFixture
+                'aoFixture' : aoFixture,
+                'sFilter'   : ''
             },
-            'helpers' : {
 
+            'helpers' : {
+                'bFiltered' : function(oFixture, oOptions)
+                {
+                    var sFilter = this.attr('sFilter');
+
+                    var sUri = oFixture.attr('sUri');
+                    var sRequest = oFixture.attr('sRequest');
+                    var sResponse = oFixture.attr('sResponse');
+
+                    if (sFilter.length < 3 ||
+                        sUri.search(sFilter) !== -1 ||
+                        sRequest.search(sFilter) !== -1 ||
+                        sResponse.search(sFilter) !== -1) {
+                        return oOptions.fn(this);
+                    }
+                    else {
+                        return oOptions.inverse(this);
+                    }
+                }
             },
 
             'events' : {
 
-                'click' : function(elTraget, oEvent) {
+                'click' : function(elTarget, oEvent)
+                {
                     this.element.remove();
                 },
 
-                'ul click' : function(elTraget, oEvent) {
+                'ul click' : function(elTarget, oEvent)
+                {
                     return false;
+                },
+
+                'ul > li > a click' : function(elTarget, oEvent)
+                {
+                    elTarget.next().toggle();
+                },
+
+                '.filter input keyup' : function(elTarget, oEvent)
+                {
+                    this.viewModel.attr('sFilter', elTarget.val());
+                },
+
+                '.clear-filter click' : function(elTarget, oEvent)
+                {
+                    this.viewModel.attr('sFilter', '');
                 }
             }
         });
@@ -59,11 +103,15 @@ require([sJsonRpcModule,
             var jqXhr = oSendAjaxRequest.apply(this, arguments);
             jqXhr.done(function(oData, sTextStatus, jqXHR)
             {
+                var oRequest = JSON.parse(sRequestData);
                 aoFixture.push({
                     'bSuccess'  : true,
                     'sUri'      : sUri,
-                    'oRequest'  : JSON.stringify(JSON.parse(sRequestData), null, '    '),
-                    'oResponse' : JSON.stringify(oData, null, '    '),oData
+                    'sClass'    : oRequest.class,
+                    'sMethod'   : oRequest.method,
+                    'sParam'    : JSON.stringify(oRequest.parameter),
+                    'sRequest'  : JSON.stringify(oRequest, null, '    '),
+                    'sResponse' : JSON.stringify(oData, null, '    '),oData
                 });
             });
         };

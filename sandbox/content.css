@@ -44,7 +44,7 @@ fixture-list {
     background-color : rgba(0,0,0,.5);
 }
 
-fixture-list ul {
+fixture-list > ul {
     display       : block !important;
     position      : relative !important;
     background    : #fff;
@@ -55,6 +55,44 @@ fixture-list ul {
     list-style    : none;
 }
 
-fixture-list ul li {
-    line-height : 30px;
+fixture-list > ul > li.filter > input {
+    width       : 100%;
+    border      : none;
+    padding     : 0px 15px;
+    line-height : 20px;
+}
+
+fixture-list > ul > li.filter > .clear-filter {
+    position : absolute;
+    padding  : 7px 10px;
+    top      : 0;
+    right    : 0;
+}
+
+fixture-list > ul > li {
+    line-height   : 30px;
+    border-bottom : 1px solid #ccc;
+}
+
+fixture-list > ul > li.fixture > a {
+    cursor        : pointer;
+    overflow      : hidden;
+    text-overflow : ellipsis;
+    white-space   : nowrap;
+}
+
+fixture-list > ul > li.fixture > a > span {
+    display       : inline-block;
+    padding-right : 10px;
+}
+
+fixture-list > ul > li.fixture .fixture-content {
+    border-top       : 1px solid #ccc;
+    display          : none;
+    background-color : #ccc;
+    padding          : 10px;
+}
+
+fixture-list > ul > li.fixture .fixture-response > pre {
+    margin-bottom : 0;
 }

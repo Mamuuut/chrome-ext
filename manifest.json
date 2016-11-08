@@ -37,9 +37,12 @@
                 "*://*.dezem.de/*",
                 "*://localhost/*"
             ],
+            "css": ["sandbox/content.css"],
             "js": [
+                "sandbox/content.js",
                 "content.js"
             ]
+
         }
     ],
     "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'"
